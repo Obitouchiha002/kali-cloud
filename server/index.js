@@ -16,9 +16,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { planFor } from "./plans.js";
 import * as auth from "./auth.js";
+import httpProxy from "http-proxy";
 
 const execFileP = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Reverse proxy so every desktop streams through THIS server (one HTTPS origin),
+// instead of exposing a public port per box. Also lets us auth-gate each desktop.
+const proxy = httpProxy.createProxyServer({ ws: true, xfwd: true });
+proxy.on("error", (err, req, res) => {
+  try { if (res && res.writeHead && !res.headersSent) { res.writeHead(502); res.end("desktop unavailable"); } }
+  catch {}
+});
 
 const APP_PORT      = Number(process.env.PORT || 3000);
 const IMAGE         = process.env.KALI_IMAGE || "kali-cloud:latest";
@@ -199,6 +208,24 @@ app.get(["/app", "/app.html"], (req, res) => {
   res.sendFile(path.join(WEB, "app.html"));
 });
 app.get(["/login", "/login.html"], (_req, res) => res.sendFile(path.join(WEB, "login.html")));
+
+// --- desktop reverse proxy (auth-gated) --------------------------------
+// Only the session's owner (or an admin) may reach /desktop/:sid/* — the
+// desktops themselves have no VNC password, so this is their access control.
+function authorizeDesktop(req, sid) {
+  const user = auth.currentUser(req);
+  if (!user) return null;
+  const s = sessions.get(sid);
+  if (!s) return null;
+  if (s.uid !== user.id && user.plan !== "admin") return null;
+  return s;
+}
+app.use("/desktop/:sid", (req, res) => {
+  const s = authorizeDesktop(req, req.params.sid);
+  if (!s) return res.status(403).send("Forbidden");
+  proxy.web(req, res, { target: `http://127.0.0.1:${s.port}` });
+});
+
 app.use(express.static(WEB)); // landing, assets, legal, etc.
 
 // --- auth API ----------------------------------------------------------
@@ -239,8 +266,11 @@ app.post("/api/session/start", auth.requireAuth, async (req, res) => {
 
     const profileName = (req.body && req.body.profile) || DEFAULT_PROFILE;
     const { sid, port, profile, plan, ttlMs } = await startSession(req.user, profileName);
-    const url = `http://localhost:${port}/vnc.html?autoconnect=1&resize=${profile.resize}`
-      + `&quality=${profile.quality}&compression=${profile.compression}`;
+    // relative URL through our reverse proxy — works on localhost AND the live
+    // domain, over one HTTPS origin. `path` tells noVNC where to open its WebSocket.
+    const wsPath = encodeURIComponent(`desktop/${sid}/websockify`);
+    const url = `/desktop/${sid}/vnc.html?autoconnect=1&resize=${profile.resize}`
+      + `&quality=${profile.quality}&compression=${profile.compression}&path=${wsPath}`;
     res.json({ ok: true, sessionId: sid, url, profile: profileName, plan: plan.id, planName: plan.name, ttlMs });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e.message || e) });
@@ -307,8 +337,19 @@ async function reapOrphans() {
 }
 
 Promise.all([detectHostCaps(), reapOrphans()]).finally(() => {
-  app.listen(APP_PORT, () => {
+  const server = app.listen(APP_PORT, () => {
     console.log(`Kali-Cloud control panel  ->  http://localhost:${APP_PORT}`);
     console.log(`Image: ${IMAGE} | egress: ${ALLOW_EGRESS ? "ON" : "isolated"} | TTL: ${SESSION_TTL_MS/60000}min`);
+  });
+
+  // proxy noVNC's WebSocket (the desktop stream) through this same server,
+  // auth-gated exactly like the HTTP side.
+  server.on("upgrade", (req, socket, head) => {
+    const m = req.url.match(/^\/desktop\/([^/?]+)(\/[^?]*)?/);
+    if (!m) { socket.destroy(); return; }
+    const s = authorizeDesktop(req, m[1]);
+    if (!s) { socket.destroy(); return; }
+    req.url = (m[2] || "/") + (req.url.includes("?") ? "?" + req.url.split("?")[1] : "");
+    proxy.ws(req, socket, head, { target: `http://127.0.0.1:${s.port}` });
   });
 });
