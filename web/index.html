@@ -120,6 +120,7 @@
   footer a{color:var(--dim)}footer a:hover{color:var(--text)}
   .disc{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;line-height:1.7}
 </style>
+<script src="/config.js"></script>
 </head>
 <body>
 
@@ -304,5 +305,20 @@
   </div>
 </div></footer>
 
+<script>
+// Route the "Launch" buttons to wherever the engine actually lives.
+(function () {
+  var engine = (window.KALI_ENGINE_URL || "").replace(/\/$/, "");
+  var local = /^(localhost|127\.|\[::1\])/.test(location.hostname);
+  document.querySelectorAll('a[href="/app"]').forEach(function (a) {
+    if (engine) { a.href = engine + "/app"; return; }        // engine deployed elsewhere
+    if (local) return;                                        // same-origin dev server
+    a.addEventListener("click", function (e) {                // static host, no engine yet
+      e.preventDefault();
+      alert("The live desktop is launching soon — we're bringing more capacity online. Check back shortly!");
+    });
+  });
+})();
+</script>
 </body>
 </html>
