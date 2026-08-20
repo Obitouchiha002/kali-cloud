@@ -1,0 +1,23 @@
+#!/bin/bash
+# Kali-Cloud service control. Usage: ./kalictl {start|stop|restart|status|logs|open}
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+PLIST="$HOME/Library/LaunchAgents/com.kalicloud.server.plist"
+URL="http://localhost:3000"
+
+case "$1" in
+  start)   launchctl load -w "$PLIST" 2>/dev/null && echo "started (auto-runs on login too)";;
+  stop)    launchctl unload "$PLIST" 2>/dev/null && echo "stopped";;
+  restart) launchctl kickstart -k "gui/$(id -u)/com.kalicloud.server" 2>/dev/null \
+             || { launchctl unload "$PLIST" 2>/dev/null; launchctl load -w "$PLIST"; }
+           echo "restarted";;
+  status)
+    if launchctl list | grep -q com.kalicloud.server; then echo "service: LOADED"; else echo "service: not loaded"; fi
+    code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/health" 2>/dev/null)
+    echo "control panel: ${code:-down} ($URL)"
+    docker info >/dev/null 2>&1 && echo "docker: up" || echo "docker: DOWN"
+    n=$(docker ps --filter name=kali-cloud- -q 2>/dev/null | wc -l | tr -d ' ')
+    echo "active Kali boxes: $n";;
+  logs)    tail -n 40 -f /Library/code/kali-cloud/kalicloud.out.log;;
+  open)    open "$URL";;
+  *) echo "Usage: ./kalictl {start|stop|restart|status|logs|open}";;
+esac

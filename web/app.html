@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Launch — Kali-Cloud</title>
+<style>
+  :root{--bg:#0a0e14;--panel:#111722;--line:#1e2836;--accent:#367bf0;--accent2:#00d4aa;--text:#e6edf3;--dim:#8b98a9;--warn:#ffb020}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+  a{color:var(--accent2);text-decoration:none}
+  .top{max-width:900px;margin:0 auto 22px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px}
+  .logo .dot{width:11px;height:11px;border-radius:50%;background:var(--accent2);box-shadow:0 0 12px var(--accent2)}
+  .who{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--dim)}
+  .badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 10px;border-radius:100px;background:rgba(54,123,240,.15);color:#7db1ff;border:1px solid rgba(54,123,240,.3)}
+  .badge.pro{background:rgba(0,212,170,.14);color:var(--accent2);border-color:rgba(0,212,170,.3)}
+  .badge.admin{background:rgba(255,176,32,.14);color:var(--warn);border-color:rgba(255,176,32,.3)}
+  .link{color:var(--dim);cursor:pointer;font-size:13px}.link:hover{color:var(--text)}
+  .wrap{max-width:900px;margin:0 auto;display:grid;grid-template-columns:1.3fr 1fr;gap:18px}
+  @media(max-width:760px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px}
+  h1{font-size:24px;margin-bottom:6px}
+  p.sub{color:var(--dim);font-size:14px;margin-bottom:20px}
+  label.fld{display:block;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px}
+  select{width:100%;background:#0c1017;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:15px;margin-bottom:6px}
+  .detected{font-size:12px;color:var(--accent2);margin:0 0 16px;min-height:16px}
+  button{width:100%;border:0;border-radius:10px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;transition:.15s}
+  button:hover{filter:brightness(1.12)} button:disabled{opacity:.6;cursor:not-allowed}
+  .row{display:flex;gap:10px;margin-top:12px}
+  .row button.secondary{background:transparent;border:1px solid var(--line);color:var(--text)}
+  .status{margin-top:16px;font-size:14px;color:var(--dim);min-height:20px}
+  .status.err{color:#ff6b6b}.status.ok{color:var(--accent2)}
+  .feature-list li{list-style:none;font-size:13px;padding:5px 0 5px 22px;position:relative;color:var(--text)}
+  .feature-list li::before{content:"✓";position:absolute;left:0;color:var(--accent2)}
+  .feature-list li.off{color:var(--dim)}.feature-list li.off::before{content:"—";color:var(--dim)}
+  .up{margin-top:16px;padding:14px;border:1px dashed var(--line);border-radius:10px;font-size:13px;color:var(--dim)}
+  .up a{font-weight:600}
+  .adminbox input,.adminbox select{margin-bottom:8px}
+  .soundToggle{font-size:14px;cursor:pointer;user-select:none}
+  h3{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:12px}
+</style>
+</head>
+<body>
+  <div class="top">
+    <a class="logo" href="/"><span class="dot"></span> Kali-Cloud</a>
+    <div class="who">
+      <span class="soundToggle" id="soundToggle">🔊</span>
+      <span id="email"></span>
+      <span class="badge" id="planBadge">…</span>
+      <span class="link" id="logout">Sign out</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>Launch your Kali desktop</h1>
+      <p class="sub">A private, isolated Kali box — real OS, ready in seconds.</p>
+
+      <label class="fld" for="quality">Performance</label>
+      <select id="quality">
+        <option value="auto">Auto — match my device (recommended)</option>
+        <option value="low">Low — smoothest on slow / low-end PCs</option>
+        <option value="medium">Medium — balanced</option>
+        <option value="high">High — sharpest (fast PC + net)</option>
+      </select>
+      <div class="detected" id="detected"></div>
+
+      <button id="launch">Launch my Kali desktop</button>
+      <div class="row" id="controls" style="display:none">
+        <button class="secondary" id="open">Open desktop</button>
+        <button class="secondary" id="stop">Stop &amp; destroy</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="card">
+      <h3>Your plan: <span id="planName"></span></h3>
+      <ul class="feature-list" id="features"></ul>
+      <div class="up" id="upsell" style="display:none">
+        🔓 Want the full advanced toolset, saved storage &amp; the extra security layer?
+        <a href="/#plans">Upgrade to Pro →</a>
+      </div>
+
+      <div class="adminbox" id="adminbox" style="display:none">
+        <h3 style="margin-top:18px">Admin · set a user's plan</h3>
+        <input id="admEmail" type="email" placeholder="user@example.com" />
+        <select id="admPlan"><option value="free">free</option><option value="pro">pro</option><option value="admin">admin</option></select>
+        <button class="secondary" id="admSet" style="background:transparent;border:1px solid var(--line);color:var(--text)">Set plan</button>
+        <div class="status" id="admMsg"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let session = null, ME = null, PLAN = null, soundOn = true;
+
+let actx=null;
+function tone(f,s=0.13,t="sine",g=0.16){if(!soundOn)return;try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume();let x=actx.currentTime;f.forEach(fr=>{const o=actx.createOscillator(),ga=actx.createGain();o.type=t;o.frequency.value=fr;ga.gain.setValueAtTime(g,x);ga.gain.exponentialRampToValueAtTime(0.001,x+s);o.connect(ga);ga.connect(actx.destination);o.start(x);o.stop(x+s);x+=s;});}catch(e){}}
+const sndOk=()=>tone([660,880,1175],0.12),sndErr=()=>tone([320,240,180],0.16,"square",0.12),sndClk=()=>tone([540],0.05,"sine",0.1);
+$("soundToggle").onclick=()=>{soundOn=!soundOn;$("soundToggle").textContent=soundOn?"🔊":"🔇";if(soundOn)sndClk();};
+
+function detect(){const c=navigator.hardwareConcurrency||2,m=navigator.deviceMemory||4,n=(navigator.connection&&navigator.connection.effectiveType)||"4g";let s=0;if(c>=8)s+=2;else if(c>=4)s+=1;if(m>=8)s+=2;else if(m>=4)s+=1;if(n==="4g")s+=2;else if(n==="3g")s+=1;return{profile:s>=5?"high":s>=3?"medium":"low",c,m,n};}
+function refreshDetected(){const sel=$("quality").value,d=detect();$("detected").textContent=sel==="auto"?`Auto: ${d.profile.toUpperCase()} · ${d.c} cores, ~${d.m}GB, ${d.n}`:`Forced: ${sel.toUpperCase()}`;}
+$("quality").onchange=()=>{sndClk();refreshDetected();};
+const chosen=()=> $("quality").value==="auto"?detect().profile:$("quality").value;
+
+function setStatus(m,k=""){const s=$("status");s.textContent=m;s.className="status "+k;}
+
+async function loadMe(){
+  const r=await fetch("/api/auth/me");
+  if(!r.ok){location.href="/login";return;}
+  const j=await r.json(); ME=j.user; PLAN=j.plan;
+  $("email").textContent=ME.email;
+  const b=$("planBadge"); b.textContent=PLAN.name; b.className="badge "+(PLAN.id==="admin"?"admin":PLAN.id==="pro"?"pro":"");
+  $("planName").textContent=PLAN.name+(PLAN.id==="free"?" (Free)":"");
+  const feats=[
+    ["Full Kali desktop",true],
+    ["Core tools (nmap, Metasploit, sqlmap…)",true],
+    ["Sealed practice network",true],
+    [`Session limit: ${Math.round(PLAN.maxSessionMs/60000)} min`,true],
+    ["Advanced / full toolset",PLAN.toolset==="full"],
+    ["Persistent storage",PLAN.persistent],
+    ["Extra security layer",PLAN.security==="hardened"],
+    ["WiFi / Bluetooth lab",PLAN.wifi],
+  ];
+  $("features").innerHTML=feats.map(([t,on])=>`<li class="${on?"":"off"}">${t}</li>`).join("");
+  if(PLAN.id==="free")$("upsell").style.display="block";
+  if(PLAN.id==="admin")$("adminbox").style.display="block";
+  [...$("quality").options].forEach(o=>{if(o.value!=="auto"&&!PLAN.profiles.includes(o.value))o.disabled=true;});
+  refreshDetected();
+}
+
+$("launch").onclick=async()=>{
+  sndClk(); $("launch").disabled=true;
+  const p=chosen(); setStatus(`Booting a fresh Kali desktop (${p})…`);
+  try{
+    const r=await fetch("/api/session/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({profile:p})});
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||"launch failed");
+    session=j; sndOk();
+    setStatus(`Live (${j.planName} · ${j.profile}). Opening…`,"ok");
+    $("launch").style.display="none"; $("controls").style.display="flex";
+    setTimeout(()=>window.open(j.url,"_blank"),1000);
+  }catch(e){sndErr();setStatus("Could not launch: "+e.message,"err");$("launch").disabled=false;}
+};
+$("open").onclick=()=>{sndClk();session&&window.open(session.url,"_blank");};
+$("stop").onclick=async()=>{
+  sndClk(); if(!session)return;
+  await fetch("/api/session/stop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:session.sessionId})});
+  session=null; $("controls").style.display="none"; $("launch").style.display="block"; $("launch").disabled=false; setStatus("Session destroyed.");
+};
+
+$("logout").onclick=async()=>{await fetch("/api/auth/logout",{method:"POST"});location.href="/";};
+$("admSet").onclick=async()=>{
+  const email=$("admEmail").value.trim(),plan=$("admPlan").value,m=$("admMsg");
+  try{const r=await fetch("/api/admin/set-plan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,plan})});const j=await r.json();if(!j.ok)throw new Error(j.error);m.className="status ok";m.textContent=`${j.email} → ${j.plan}`;}
+  catch(e){m.className="status err";m.textContent=e.message;}
+};
+
+loadMe();
+</script>
+</body>
+</html>

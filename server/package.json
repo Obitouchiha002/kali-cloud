@@ -1,0 +1,13 @@
+{
+  "name": "kali-cloud-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Control panel: spawns a private real-Kali desktop per user, on demand.",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

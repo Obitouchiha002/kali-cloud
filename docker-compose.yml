@@ -1,0 +1,27 @@
+# Phase 0 : one real Kali desktop, in your browser.
+#   docker compose up --build   ->   http://localhost:6080/vnc.html?autoconnect=1&resize=remote
+services:
+  kali:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+      args:
+        # full toolset by default; set to kali-linux-headless for a faster first build
+        METAPACKAGE: kali-linux-default
+    image: kali-cloud:latest
+    container_name: kali-cloud
+    hostname: kali
+    extra_hosts:                # resolve own hostname even when isolated
+      - "kali:127.0.0.1"
+    sysctls:                    # allow unprivileged `ping`
+      net.ipv4.ping_group_range: "0 2147483647"
+    shm_size: "1gb"            # browsers/GUI apps inside need shared memory
+    ports:
+      - "6080:6080"           # noVNC (browser)
+    environment:
+      SCREEN_GEOMETRY: "1440x900"
+      VNC_PASSWORD: "kali"
+    # --- isolation: no outbound internet by default (safety). ---
+    # Comment the next line out only if a lab needs egress.
+    # network_mode: "none"
+    restart: unless-stopped
