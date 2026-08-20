@@ -1,1 +1,1 @@
-window.KALI_ENGINE_URL = "";
+window.KALI_ENGINE_URL = "https://kali.lzworth.in";
