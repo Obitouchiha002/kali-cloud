@@ -96,7 +96,7 @@ const objs = [...document.querySelectorAll('.obj')];
 
 const S = {
   step: 0, monitor: false, scanning: false, iface: 'wlan0', mon: 'wlan0mon',
-  target: null, captured: false, capFile: null,
+  target: null, captured: false, capFile: null, pendingWifite: false,
   networks: [
     { bssid:'A4:2B:8C:11:9F:03', ch:6,  pwr:-42, essid:'HomeNet_5G', enc:'WPA2', clients:['3C:5A:B4:0D:22:71'] },
     { bssid:'D8:47:32:1A:5E:9C', ch:1,  pwr:-67, essid:'JioFiber-2.4', enc:'WPA2', clients:[] },
@@ -125,8 +125,11 @@ const HINTS = [
 ];
 
 const banner = () => {
-  line('WiFi Lab — simulated aircrack-ng environment', 'cyan');
-  line('This is a safe practice simulator. Type "help" to begin. Mission: crack HomeNet_5G.', 'dim');
+  line('WiFi Lab — simulated aircrack-ng + wifite environment', 'cyan');
+  line('Two ways to crack HomeNet_5G:', 'dim');
+  line('  • EASY:   type  wifite   — the all-in-one auto tool (github.com/derv82/wifite)', 'amber');
+  line('  • MANUAL: airmon-ng → airodump-ng → aireplay-ng → aircrack-ng (learn each step)', 'dim');
+  line('Type "help" for all commands. This is a safe simulator — no real radio is used.', 'dim');
   line('');
 };
 
@@ -138,8 +141,12 @@ async function run(raw){
   const a = cmd.split(/\s+/);
   const c = a[0];
 
+  // wifite is waiting for a target selection
+  if(S.pendingWifite){ await wifiteSelect(cmd); return; }
+
   if(c==='help'){
     line('Available commands (this simulator):','cyan');
+    line('  wifite                                        EASY MODE — auto scan+capture+crack','amber');
     line('  airmon-ng start wlan0                         enable monitor mode');
     line('  airodump-ng wlan0mon                          scan for networks');
     line('  airodump-ng -c <ch> --bssid <mac> -w <f> wlan0mon   capture a target');
@@ -261,11 +268,73 @@ async function run(raw){
     return;
   }
 
+  // wifite — the popular all-in-one auto-attack tool
+  if(c==='wifite'){
+    line('  .;\'                     \';.','dim');
+    line('   wifite2  2.7.0   (automated wireless auditor)','cyan');
+    line('');
+    line('[+] scanning for wireless devices on wlan0...','green');
+    await sleep(500);
+    line('[+] enabling monitor mode on wlan0...  enabled: wlan0mon','green');
+    S.monitor=true;
+    await sleep(500);
+    line('[+] scanning (press the target number when ready)','dim');
+    line('');
+    line('   NUM  ESSID           CH  ENC   PWR  WPS  CLIENT','white');
+    line('   ---  ----            --  ---   ---  ---  ------','dim');
+    for(let i=0;i<S.networks.length;i++){
+      await sleep(280);
+      const n=S.networks[i];
+      line(`   ${String(i+1).padEnd(4)} ${n.essid.padEnd(15)} ${String(n.ch).padStart(2)}  ${n.enc.padEnd(5)} ${Math.abs(n.pwr)}db  ${i===1?'yes':'no '}  ${n.clients.length}`);
+    }
+    line('');
+    line('[+] select target(s) (1-'+S.networks.length+') separated by commas, or "all":','amber');
+    S.pendingWifite=true;
+    if(S.step<2) setStep(2);
+    return;
+  }
+
   line(`${c}: command not found. Type "help".`,'red');
 }
 
+// wifite target selection -> auto attack
+async function wifiteSelect(sel){
+  S.pendingWifite=false;
+  let idx = parseInt(sel)-1;
+  if(sel.trim().toLowerCase()==='all') idx=0;
+  if(isNaN(idx) || idx<0 || idx>=S.networks.length){ line('[!] invalid selection. Run wifite again.','red'); return; }
+  const net=S.networks[idx];
+  S.target=net; S.capFile='hs/'+net.essid;
+  line(`[+] (1/1) starting attacks against ${net.bssid} (${net.essid})`,'green');
+  await sleep(500);
+  if(!net.clients.length){
+    line(`[!] ${net.essid}: no clients found — cannot capture a handshake here. Pick one with CLIENT ≥ 1 (try HomeNet_5G).`,'red');
+    return;
+  }
+  line(`[+] ${net.essid} (${Math.abs(net.pwr)}db) WPA handshake capture: Listening. (clients:${net.clients.length}, deauth:5s)`,'amber');
+  for(let i=1;i<=5;i++){ await sleep(300); line(`   [+] sending deauth to client ${net.clients[0]}  (${i}/5)`,'dim'); setStep(3); }
+  await sleep(400);
+  S.captured=true;
+  line(`[+] captured ${net.essid} handshake`,'green'); setStep(4);
+  await sleep(400);
+  line('[+] analysis of captured handshake file:','dim');
+  line('    a valid WPA2 handshake was captured.','dim');
+  await sleep(400);
+  line(`[+] cracking ${net.essid} with aircrack-ng (wordlist: rockyou.txt)`,'cyan');
+  const tries=['12345678','iloveyou','admin123','password123'];
+  for(let i=0;i<tries.length;i++){ await sleep(300); line(`    testing: ${tries[i]}   (${1500+i*220} keys/sec)`,'dim'); if(tries[i]===S.secret) break; }
+  await sleep(400);
+  line('');
+  line(`[+] cracked ${net.essid} (${net.bssid})!  key: "${S.secret}"`,'green');
+  line('[+] saved crack result to cracked.txt','dim');
+  line('');
+  line('🎉 wifite did the whole chain automatically — scan, capture, deauth, crack.','green');
+  line('That is why beginners love it. Now try the manual aircrack-ng way too!','dim');
+  setStep(5);
+}
+
 // quick command buttons
-const QUICK=['help','airmon-ng start wlan0','airodump-ng wlan0mon','airodump-ng -c 6 --bssid A4:2B:8C:11:9F:03 -w capture wlan0mon','aireplay-ng --deauth 5 -a A4:2B:8C:11:9F:03 wlan0mon','aircrack-ng -w rockyou.txt capture-01.cap','clear'];
+const QUICK=['help','wifite','airmon-ng start wlan0','airodump-ng wlan0mon','airodump-ng -c 6 --bssid A4:2B:8C:11:9F:03 -w capture wlan0mon','aireplay-ng --deauth 5 -a A4:2B:8C:11:9F:03 wlan0mon','aircrack-ng -w rockyou.txt capture-01.cap','clear'];
 const quick=document.getElementById('quick');
 QUICK.forEach(q=>{ const b=document.createElement('button'); b.textContent=q.length>28?q.slice(0,26)+'…':q; b.title=q; b.onclick=()=>{ input.value=q; input.focus(); }; quick.appendChild(b); });
 
