@@ -5,23 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Admin — Kali-Cloud</title>
 <style>
-  :root{--bg:#0a0e14;--panel:#0c1220;--line:#1e2836;--accent:#367bf0;--accent2:#00d4aa;--text:#e6edf3;--dim:#8b98a9;--red:#f87171;--amber:#fbbf24;--green:#4ade80}
+  :root{--bg:#0a0e14;--panel:#0c1220;--panel2:#0e1626;--line:#1e2836;--accent:#367bf0;--accent2:#00d4aa;--text:#e6edf3;--dim:#8b98a9;--red:#f87171;--amber:#fbbf24;--green:#4ade80;--purple:#a78bfa}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
   a{color:var(--accent2);text-decoration:none}
-  .top{border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;justify-content:space-between}
+  .top{border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,14,20,.9);backdrop-filter:blur(8px);z-index:5}
   .logo{display:flex;align-items:center;gap:10px;font-weight:800}
   .logo .dot{width:11px;height:11px;border-radius:50%;background:var(--accent2);box-shadow:0 0 12px var(--accent2)}
+  .top .r{display:flex;gap:16px;align-items:center;font-size:14px}
   .wrap{max-width:1200px;margin:0 auto;padding:22px}
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
   @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
-  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-  .stat .n{font-size:28px;font-weight:800}
-  .stat .l{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px}
-  .card h2{font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .stat{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .stat .n{font-size:30px;font-weight:800;line-height:1}
+  .stat .l{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:840px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+  .card h2{font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .card h2 .t{display:flex;align-items:center;gap:8px}
   .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
   @keyframes pulse{50%{opacity:.35}}
+  /* charts */
+  .chart{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:8px}
+  .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end;height:100%}
+  .bar .col{width:70%;max-width:34px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--accent),#264a8f);min-height:2px;position:relative;transition:.3s}
+  .bar .col.g{background:linear-gradient(180deg,var(--green),#1f7a45)}
+  .bar .v{font-size:11px;color:var(--dim);font-weight:700}
+  .bar .d{font-size:10px;color:var(--dim)}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--dim);margin-top:6px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+  .dist{display:flex;flex-direction:column;gap:12px}
+  .dist .row{display:flex;align-items:center;gap:12px;font-size:13px}
+  .dist .row .name{width:60px;color:var(--dim)}
+  .dist .track{flex:1;height:12px;background:#0a101c;border-radius:100px;overflow:hidden}
+  .dist .fill{height:100%;border-radius:100px}
+  .dist .cnt{width:34px;text-align:right;font-weight:700}
+  /* tables */
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th{text-align:left;color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
   td{padding:9px 10px;border-bottom:1px solid #131c2b;vertical-align:middle}
@@ -32,24 +52,25 @@
   .pill.admin{background:rgba(54,123,240,.18);color:#7aa7f5}
   .pill.blocked{background:rgba(248,113,113,.15);color:var(--red)}
   .pill.ok{background:rgba(74,222,128,.14);color:var(--green)}
-  button{font-size:12px;border:1px solid var(--line);background:transparent;color:var(--text);border-radius:7px;padding:5px 11px;cursor:pointer}
+  button{font-size:12px;border:1px solid var(--line);background:transparent;color:var(--text);border-radius:7px;padding:5px 11px;cursor:pointer;transition:.15s}
   button:hover{border-color:var(--accent)}
   button.danger{color:var(--red);border-color:rgba(248,113,113,.3)}
   button.danger:hover{background:rgba(248,113,113,.1)}
-  select{background:#0a101c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
+  select{background:#0a101c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer}
   .muted{color:var(--dim)}
-  .feed{max-height:340px;overflow-y:auto;font-family:"SF Mono",Menlo,monospace;font-size:12.5px}
-  .feed .row{padding:5px 0;border-bottom:1px solid #131c2b;display:flex;gap:10px}
-  .feed .t{color:var(--dim);white-space:nowrap}
-  .empty{color:var(--dim);font-size:13px;padding:14px 0}
-  .refresh{font-size:11px;color:var(--dim)}
+  .feed{max-height:320px;overflow-y:auto;font-size:12.5px}
+  .feed .row{padding:6px 0;border-bottom:1px solid #131c2b;display:flex;gap:10px}
+  .feed .t{color:var(--dim);white-space:nowrap;font-size:11.5px}
+  .empty{color:var(--dim);font-size:13px;padding:16px 0;text-align:center}
+  .mono{font-family:"SF Mono",Menlo,Consolas,monospace}
+  .actions{display:flex;gap:5px;flex-wrap:wrap}
 </style>
 </head>
 <body>
   <div class="top">
     <div class="logo"><span class="dot"></span> Kali-Cloud · <span class="muted" style="font-weight:600">Admin</span></div>
-    <div style="display:flex;gap:16px;align-items:center">
-      <span class="refresh" id="refresh">auto-refresh: on</span>
+    <div class="r">
+      <span class="muted mono" id="clock" style="font-size:12px"></span>
       <a href="/app">← App</a>
       <a href="#" id="logout">Logout</a>
     </div>
@@ -58,82 +79,106 @@
   <div class="wrap">
     <div class="stats">
       <div class="stat"><div class="n" id="s-users">–</div><div class="l">Total users</div></div>
-      <div class="stat"><div class="n" id="s-live" style="color:var(--green)">–</div><div class="l">Live now</div></div>
+      <div class="stat"><div class="n" id="s-live" style="color:var(--green)">–</div><div class="l">🟢 Live now</div></div>
       <div class="stat"><div class="n" id="s-today">–</div><div class="l">Logins today</div></div>
-      <div class="stat"><div class="n" id="s-blocked" style="color:var(--red)">–</div><div class="l">Blocked</div></div>
+      <div class="stat"><div class="n" id="s-time">–</div><div class="l">Total usage</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2><span class="t">📈 Activity (last 7 days)</span></h2>
+        <div class="chart" id="chart"></div>
+        <div class="legend"><span><i style="background:var(--green)"></i>Signups</span><span><i style="background:var(--accent)"></i>Logins</span></div>
+      </div>
+      <div class="card">
+        <h2><span class="t">🥧 Plan distribution</span></h2>
+        <div class="dist" id="dist"></div>
+        <h2 style="margin:20px 0 10px"><span class="t">⚙️ Usage totals</span></h2>
+        <div style="display:flex;gap:20px;font-size:13px">
+          <div><div class="muted" style="font-size:11px">Boxes launched</div><div style="font-size:20px;font-weight:800" id="t-launch">–</div></div>
+          <div><div class="muted" style="font-size:11px">Avg session</div><div style="font-size:20px;font-weight:800" id="t-avg">–</div></div>
+          <div><div class="muted" style="font-size:11px">Blocked</div><div style="font-size:20px;font-weight:800;color:var(--red)" id="t-blocked">–</div></div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
-      <h2><span class="live-dot"></span> Live sessions <span class="refresh" id="live-count"></span></h2>
+      <h2><span class="t"><span class="live-dot"></span> Live sessions <span class="muted" id="live-count"></span></span></h2>
       <div id="live-wrap"><div class="empty">No one is online right now.</div></div>
     </div>
 
     <div class="card">
-      <h2 style="justify-content:space-between">👥 Users
-        <span><a href="/api/admin/export/users.csv" download><button>⬇ Users CSV</button></a>
+      <h2><span class="t">👥 Users</span>
+        <span class="actions"><a href="/api/admin/export/users.csv" download><button>⬇ Users CSV</button></a>
         <a href="/api/admin/export/activity.csv" download><button>⬇ Activity CSV</button></a></span>
       </h2>
       <div style="overflow-x:auto"><table id="users">
         <thead><tr><th>Email</th><th>Plan</th><th>Status</th><th>Last IP</th><th>Last seen</th><th>Logins</th><th>Live</th><th>Actions</th></tr></thead>
         <tbody></tbody>
       </table></div>
+      <div class="muted" style="font-size:11px;margin-top:8px">Tip: change a user's plan from the dropdown — it saves instantly.</div>
     </div>
 
-    <div class="card">
-      <h2>🚫 Banned IPs</h2>
-      <div id="banned-wrap"><div class="empty">No IPs banned.</div></div>
-    </div>
-
-    <div class="card">
-      <h2>📜 Recent activity</h2>
-      <div class="feed" id="feed"><div class="empty">No activity yet.</div></div>
+    <div class="grid2">
+      <div class="card">
+        <h2><span class="t">🚫 Banned IPs</span></h2>
+        <div id="banned-wrap"><div class="empty">No IPs banned.</div></div>
+      </div>
+      <div class="card">
+        <h2><span class="t">📜 Recent activity</span></h2>
+        <div class="feed" id="feed"><div class="empty">No activity yet.</div></div>
+      </div>
     </div>
   </div>
 
 <script>
-const $ = (id)=>document.getElementById(id);
-const api = (p,o)=>fetch(p,o).then(r=>r.json());
-const fmtWhen = (t)=>{ if(!t) return '—'; const d=new Date(t), now=Date.now(), s=Math.floor((now-t)/1000);
-  if(s<60) return s+'s ago'; if(s<3600) return Math.floor(s/60)+'m ago'; if(s<86400) return Math.floor(s/3600)+'h ago';
-  return d.toLocaleDateString(); };
-const fmtDur = (ms)=>{ const s=Math.floor(ms/1000); if(s<60) return s+'s'; const m=Math.floor(s/60); if(m<60) return m+'m '+(s%60)+'s'; return Math.floor(m/60)+'h '+(m%60)+'m'; };
-const esc = (s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $=(id)=>document.getElementById(id);
+const api=(p,o)=>fetch(p,o).then(r=>r.json());
+const esc=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmtWhen=(t)=>{ if(!t)return '—'; const s=Math.floor((Date.now()-t)/1000);
+  if(s<60)return s+'s ago'; if(s<3600)return Math.floor(s/60)+'m ago'; if(s<86400)return Math.floor(s/3600)+'h ago'; return new Date(t).toLocaleDateString(); };
+const fmtDur=(ms)=>{ const s=Math.floor(ms/1000); if(s<60)return s+'s'; const m=Math.floor(s/60); if(m<60)return m+'m'; const h=Math.floor(m/60); return h+'h '+(m%60)+'m'; };
 
 async function guard(){
-  const me = await api('/api/auth/me').catch(()=>({}));
-  if(!me.ok || !me.user || me.user.plan!=='admin'){ location.href='/login'; return false; }
+  const me=await api('/api/auth/me').catch(()=>({}));
+  if(!me.ok||!me.user||me.user.plan!=='admin'){ location.href='/login'; return false; }
   return true;
 }
 
-async function loadAll(){
-  const [u,l,a,bip] = await Promise.all([
-    api('/api/admin/users'), api('/api/admin/live'), api('/api/admin/activity?limit=120'), api('/api/admin/banned-ips')
-  ]);
-  if(!u.ok) return;
-  const users=u.users, live=l.sessions||[], act=a.activity||[], bannedIps=(bip&&bip.ips)||[];
+function renderCharts(users, act){
+  // 7-day buckets
+  const days=[]; const now=new Date(); now.setHours(0,0,0,0);
+  for(let i=6;i>=0;i--){ const d=new Date(now); d.setDate(d.getDate()-i); days.push({key:d.getTime(), label:d.toLocaleDateString(undefined,{weekday:'short'}), signups:0, logins:0}); }
+  const dayOf=(t)=>{ const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+  for(const e of act){ const b=days.find(x=>x.key===dayOf(e.t)); if(!b)continue; if(e.type==='signup')b.signups++; if(e.type==='login')b.logins++; }
+  const max=Math.max(1,...days.map(d=>Math.max(d.signups,d.logins)));
+  $('chart').innerHTML=days.map(d=>`<div class="bar" title="${d.label}: ${d.logins} logins, ${d.signups} signups">
+    <div class="v">${d.logins+d.signups||''}</div>
+    <div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center;height:100%">
+      <div class="col g" style="height:${d.signups/max*100}%;width:12px"></div>
+      <div class="col" style="height:${d.logins/max*100}%;width:12px"></div>
+    </div><div class="d">${d.label}</div></div>`).join('');
 
-  // banned IPs
-  $('banned-wrap').innerHTML = bannedIps.length
-    ? bannedIps.map(ip=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #131c2b"><span class="muted" style="font-family:monospace">${esc(ip)}</span><button data-unbanip="${esc(ip)}">Unban</button></div>`).join('')
-    : '<div class="empty">No IPs banned.</div>';
+  // plan distribution
+  const plans={free:0,pro:0,admin:0}; users.forEach(u=>plans[u.plan]=(plans[u.plan]||0)+1);
+  const tot=Math.max(1,users.length);
+  const col={free:'var(--dim)',pro:'var(--accent2)',admin:'var(--accent)'};
+  $('dist').innerHTML=['free','pro','admin'].map(p=>`<div class="row"><span class="name">${p}</span>
+    <span class="track"><span class="fill" style="width:${plans[p]/tot*100}%;background:${col[p]}"></span></span>
+    <span class="cnt">${plans[p]}</span></div>`).join('');
 
-  // stats
-  $('s-users').textContent=users.length;
-  $('s-live').textContent=live.length;
-  $('s-blocked').textContent=users.filter(x=>x.blocked).length;
-  const dayStart=new Date(); dayStart.setHours(0,0,0,0);
-  $('s-today').textContent=act.filter(e=>e.type==='login' && e.t>=dayStart.getTime()).length;
+  // usage totals
+  const launches=act.filter(e=>e.type==='launch').length;
+  const ends=act.filter(e=>e.type==='end'&&e.durMs);
+  const totalMs=ends.reduce((a,e)=>a+e.durMs,0);
+  const avg=ends.length?totalMs/ends.length:0;
+  $('s-time').textContent=fmtDur(totalMs);
+  $('t-launch').textContent=launches;
+  $('t-avg').textContent=ends.length?fmtDur(avg):'–';
+  $('t-blocked').textContent=users.filter(u=>u.blocked).length;
+}
 
-  // live sessions
-  $('live-count').textContent = live.length ? `(${live.length})` : '';
-  if(!live.length){ $('live-wrap').innerHTML='<div class="empty">No one is online right now.</div>'; }
-  else {
-    let h='<div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Plan</th><th>Quality</th><th>IP</th><th>Online for</th></tr></thead><tbody>';
-    for(const s of live){ h+=`<tr><td>${esc(s.email)}</td><td><span class="pill ${s.plan}">${s.plan}</span></td><td class="muted">${esc(s.profile||'—')}</td><td class="muted">${esc(s.ip||'—')}</td><td style="color:var(--green)">${fmtDur(s.durationMs)}</td></tr>`; }
-    $('live-wrap').innerHTML=h+'</tbody></table></div>';
-  }
-
-  // users table
+function renderUsers(users, active){
   const tb=$('users').querySelector('tbody'); tb.innerHTML='';
   for(const x of users){
     const tr=document.createElement('tr');
@@ -143,47 +188,78 @@ async function loadAll(){
         ${['free','pro','admin'].map(p=>`<option ${x.plan===p?'selected':''}>${p}</option>`).join('')}
       </select></td>
       <td>${x.blocked?'<span class="pill blocked">blocked</span>':'<span class="pill ok">active</span>'}</td>
-      <td class="muted">${x.lastIp?esc(x.lastIp):'—'}</td>
+      <td class="muted mono" style="font-size:12px">${x.lastIp?esc(x.lastIp):'—'}</td>
       <td class="muted">${fmtWhen(x.lastLoginAt)}</td>
       <td class="muted">${x.loginCount||0}</td>
-      <td>${x.activeSessions?`<span style="color:var(--green)">● ${x.activeSessions}</span>`:'<span class="muted">—</span>'}</td>
-      <td>${x.plan==='admin'?'<span class="muted">—</span>':(x.blocked
+      <td>${(active[x.email]||0)?`<span style="color:var(--green)">● ${active[x.email]}</span>`:'<span class="muted">—</span>'}</td>
+      <td class="actions">${x.plan==='admin'?'<span class="muted">—</span>':(x.blocked
         ? `<button data-unblock="${esc(x.email)}">Unblock</button>`
         : `<button class="danger" data-block="${esc(x.email)}">Block</button>`)}
-        ${x.lastIp?`<button class="danger" data-banip="${esc(x.lastIp)}" title="Ban this IP">Ban IP</button>`:''}</td>`;
+        ${x.lastIp?`<button class="danger" data-banip="${esc(x.lastIp)}" title="Ban ${esc(x.lastIp)}">Ban IP</button>`:''}</td>`;
     tb.appendChild(tr);
-  }
-
-  // activity feed
-  if(!act.length){ $('feed').innerHTML='<div class="empty">No activity yet.</div>'; }
-  else {
-    const icon={login:'🔑 signed in',launch:'🚀 launched a box',end:'⏹ box ended',blocked:'⛔ blocked',unblocked:'✅ unblocked'};
-    $('feed').innerHTML=act.map(e=>{
-      const what=icon[e.type]||e.type;
-      const extra=e.type==='end'&&e.durMs?` <span class="muted">(${fmtDur(e.durMs)})</span>`:'';
-      return `<div class="row"><span class="t">${fmtWhen(e.t)}</span><span><b>${esc(e.email||'?')}</b> ${what}${extra}</span></div>`;
-    }).join('');
   }
 }
 
-// event delegation for actions
+async function loadAll(){
+  const [u,l,a,bip]=await Promise.all([
+    api('/api/admin/users'), api('/api/admin/live'), api('/api/admin/activity?limit=400'), api('/api/admin/banned-ips')
+  ]);
+  if(!u.ok)return;
+  const users=u.users, live=l.sessions||[], act=a.activity||[], bannedIps=(bip&&bip.ips)||[];
+  const activeByEmail={}; users.forEach(x=>{ if(x.activeSessions)activeByEmail[x.email]=x.activeSessions; });
+
+  // stats
+  $('s-users').textContent=users.length;
+  $('s-live').textContent=live.length;
+  const dayStart=new Date(); dayStart.setHours(0,0,0,0);
+  $('s-today').textContent=act.filter(e=>e.type==='login'&&e.t>=dayStart.getTime()).length;
+
+  renderCharts(users, act);
+
+  // live sessions
+  $('live-count').textContent=live.length?`(${live.length})`:'';
+  $('live-wrap').innerHTML=!live.length?'<div class="empty">No one is online right now.</div>':
+    '<div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Plan</th><th>Quality</th><th>IP</th><th>Online for</th></tr></thead><tbody>'+
+    live.map(s=>`<tr><td>${esc(s.email)}</td><td><span class="pill ${s.plan}">${s.plan}</span></td><td class="muted">${esc(s.profile||'—')}</td><td class="muted mono" style="font-size:12px">${esc(s.ip||'—')}</td><td style="color:var(--green)">${fmtDur(s.durationMs)}</td></tr>`).join('')+
+    '</tbody></table></div>';
+
+  // users table — skip re-render if admin is mid-interaction with a dropdown
+  const ae=document.activeElement;
+  if(!(ae&&ae.classList&&ae.classList.contains('plan-sel'))) renderUsers(users, activeByEmail);
+
+  // banned IPs
+  $('banned-wrap').innerHTML=bannedIps.length
+    ? bannedIps.map(ip=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #131c2b"><span class="muted mono">${esc(ip)}</span><button data-unbanip="${esc(ip)}">Unban</button></div>`).join('')
+    : '<div class="empty">No IPs banned.</div>';
+
+  // activity feed
+  const icon={signup:'✨ signed up',login:'🔑 signed in',launch:'🚀 launched a box',end:'⏹ box ended',blocked:'⛔ blocked',unblocked:'✅ unblocked','ip-banned':'🚫 IP banned'};
+  $('feed').innerHTML=!act.length?'<div class="empty">No activity yet.</div>':
+    act.slice(0,120).map(e=>{ const what=icon[e.type]||e.type; const extra=e.type==='end'&&e.durMs?` <span class="muted">(${fmtDur(e.durMs)})</span>`:'';
+      return `<div class="row"><span class="t">${fmtWhen(e.t)}</span><span><b>${esc(e.email||'?')}</b> ${what}${extra}</span></div>`; }).join('');
+}
+
+// actions
 document.addEventListener('click', async (ev)=>{
   const b=ev.target;
   if(b.dataset.block){ if(confirm('Block '+b.dataset.block+'? Their running boxes will be stopped.')){ await api('/api/admin/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.block})}); loadAll(); } }
   if(b.dataset.unblock){ await api('/api/admin/unblock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.unblock})}); loadAll(); }
-  if(b.dataset.banip){ if(confirm('Ban IP '+b.dataset.banip+'? All requests + live boxes from it are blocked.')){ await api('/api/admin/ban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:b.dataset.banip})}); loadAll(); } }
+  if(b.dataset.banip){ if(confirm('Ban IP '+b.dataset.banip+'?')){ const r=await api('/api/admin/ban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:b.dataset.banip})}); if(!r.ok)alert(r.error); loadAll(); } }
   if(b.dataset.unbanip){ await api('/api/admin/unban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:b.dataset.unbanip})}); loadAll(); }
 });
 document.addEventListener('change', async (ev)=>{
-  if(ev.target.classList.contains('plan-sel')){
-    const email=ev.target.dataset.email, plan=ev.target.value;
-    await api('/api/admin/set-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan})});
+  const t=ev.target;
+  if(t.classList.contains('plan-sel')){
+    t.disabled=true;
+    const r=await api('/api/admin/set-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:t.dataset.email,plan:t.value})});
+    if(!r.ok)alert(r.error||'failed');
     loadAll();
   }
 });
 $('logout').onclick=async(e)=>{ e.preventDefault(); await api('/api/auth/logout',{method:'POST'}); location.href='/'; };
+setInterval(()=>{ $('clock').textContent=new Date().toLocaleTimeString(); }, 1000);
 
-(async()=>{ if(await guard()){ loadAll(); setInterval(loadAll, 5000); } })();
+(async()=>{ if(await guard()){ loadAll(); setInterval(loadAll, 6000); } })();
 </script>
 </body>
 </html>
