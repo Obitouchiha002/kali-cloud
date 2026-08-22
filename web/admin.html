@@ -5,126 +5,152 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Admin — Kali-Cloud</title>
 <style>
-  :root{--bg:#0a0e14;--panel:#0c1220;--panel2:#0e1626;--line:#1e2836;--accent:#367bf0;--accent2:#00d4aa;--text:#e6edf3;--dim:#8b98a9;--red:#f87171;--amber:#fbbf24;--green:#4ade80;--purple:#a78bfa}
+  :root{
+    --bg:#080b11;--panel:#0e141f;--panel2:#111a28;--line:#1c2637;--line2:#263349;
+    --text:#e8eef6;--dim:#7d8ba0;--dim2:#57657d;
+    --accent:#4b8cf7;--accent2:#22d3aa;--red:#f6685e;--amber:#f7b83e;--green:#37d66f;--purple:#9d7bf5;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
   a{color:var(--accent2);text-decoration:none}
-  .top{border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,14,20,.9);backdrop-filter:blur(8px);z-index:5}
-  .logo{display:flex;align-items:center;gap:10px;font-weight:800}
-  .logo .dot{width:11px;height:11px;border-radius:50%;background:var(--accent2);box-shadow:0 0 12px var(--accent2)}
-  .top .r{display:flex;gap:16px;align-items:center;font-size:14px}
-  .wrap{max-width:1200px;margin:0 auto;padding:22px}
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
-  .stat{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-  .stat .n{font-size:30px;font-weight:800;line-height:1}
-  .stat .l{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:840px){.grid2{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
-  .card h2{font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
+  /* header */
+  .top{border-bottom:1px solid var(--line);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(8,11,17,.85);backdrop-filter:blur(10px);z-index:10}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .logo .dot{width:9px;height:9px;border-radius:50%;background:var(--accent2);box-shadow:0 0 10px var(--accent2)}
+  .logo .sub{color:var(--dim);font-weight:500}
+  .top .r{display:flex;gap:18px;align-items:center;font-size:13px;color:var(--dim)}
+  .top .r a{color:var(--text)}.top .r a:hover{color:var(--accent2)}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 24px 60px}
+  /* stat row */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 17px;position:relative;overflow:hidden}
+  .stat::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+  .stat.g::after{background:var(--green)}.stat.a::after{background:var(--amber)}.stat.p::after{background:var(--purple)}
+  .stat .n{font-size:26px;font-weight:750;letter-spacing:-.02em;line-height:1.1}
+  .stat .l{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:5px;font-weight:600}
+  /* cards + grid */
+  .grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .card.tight{padding:14px 16px}
+  .card h2{font-size:13px;font-weight:650;margin-bottom:14px;display:flex;align-items:center;gap:8px;justify-content:space-between;color:var(--text)}
   .card h2 .t{display:flex;align-items:center;gap:8px}
-  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
-  @keyframes pulse{50%{opacity:.35}}
-  /* charts */
-  .chart{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:8px}
-  .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end;height:100%}
-  .bar .col{width:70%;max-width:34px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--accent),#264a8f);min-height:2px;position:relative;transition:.3s}
-  .bar .col.g{background:linear-gradient(180deg,var(--green),#1f7a45)}
-  .bar .v{font-size:11px;color:var(--dim);font-weight:700}
-  .bar .d{font-size:10px;color:var(--dim)}
-  .legend{display:flex;gap:16px;font-size:12px;color:var(--dim);margin-top:6px}
-  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
-  .dist{display:flex;flex-direction:column;gap:12px}
-  .dist .row{display:flex;align-items:center;gap:12px;font-size:13px}
-  .dist .row .name{width:60px;color:var(--dim)}
-  .dist .track{flex:1;height:12px;background:#0a101c;border-radius:100px;overflow:hidden}
-  .dist .fill{height:100%;border-radius:100px}
-  .dist .cnt{width:34px;text-align:right;font-weight:700}
+  .card h2 .sub{font-size:11px;color:var(--dim);font-weight:500}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  /* activity chart */
+  .chartbox{position:relative;height:150px;margin-top:4px}
+  .grid-lines{position:absolute;inset:0 0 22px 0;display:flex;flex-direction:column;justify-content:space-between}
+  .grid-lines span{border-top:1px solid var(--line);height:0}
+  .chart{position:absolute;inset:0;display:flex;align-items:flex-end;gap:10px;padding-bottom:22px}
+  .bar{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}
+  .bar .track{position:absolute;bottom:22px;top:0;width:26px;background:var(--panel2);border-radius:5px}
+  .bar .cols{position:relative;display:flex;gap:3px;align-items:flex-end;height:100%;z-index:1}
+  .bar .col{width:11px;border-radius:4px 4px 0 0;min-height:3px;transition:height .4s ease}
+  .bar .col.s{background:linear-gradient(180deg,var(--green),#1c8f49)}
+  .bar .col.l{background:linear-gradient(180deg,var(--accent),#2a5bb0)}
+  .bar .lab{position:absolute;bottom:2px;font-size:10px;color:var(--dim);font-weight:600}
+  .bar .val{position:absolute;top:-16px;font-size:10px;color:var(--dim);font-weight:700}
+  .legend{display:flex;gap:16px;font-size:11.5px;color:var(--dim);margin-top:10px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  /* plan distribution + totals */
+  .dist{display:flex;flex-direction:column;gap:11px;margin-bottom:16px}
+  .dist .row{display:flex;align-items:center;gap:11px;font-size:12.5px}
+  .dist .name{width:46px;color:var(--dim);text-transform:capitalize;font-weight:600}
+  .dist .track{flex:1;height:9px;background:var(--panel2);border-radius:100px;overflow:hidden}
+  .dist .fill{height:100%;border-radius:100px;min-width:3px;transition:width .5s}
+  .dist .cnt{width:24px;text-align:right;font-weight:700}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid var(--line);padding-top:14px}
+  .kpi .kl{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+  .kpi .kv{font-size:19px;font-weight:750}
   /* tables */
-  table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th{text-align:left;color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
-  td{padding:9px 10px;border-bottom:1px solid #131c2b;vertical-align:middle}
-  tr:hover td{background:#0a101c}
-  .pill{font-size:11px;padding:2px 9px;border-radius:100px;font-weight:600}
-  .pill.free{background:rgba(139,152,169,.15);color:var(--dim)}
-  .pill.pro{background:rgba(0,212,170,.15);color:var(--accent2)}
-  .pill.admin{background:rgba(54,123,240,.18);color:#7aa7f5}
-  .pill.blocked{background:rgba(248,113,113,.15);color:var(--red)}
-  .pill.ok{background:rgba(74,222,128,.14);color:var(--green)}
-  button{font-size:12px;border:1px solid var(--line);background:transparent;color:var(--text);border-radius:7px;padding:5px 11px;cursor:pointer;transition:.15s}
-  button:hover{border-color:var(--accent)}
-  button.danger{color:var(--red);border-color:rgba(248,113,113,.3)}
-  button.danger:hover{background:rgba(248,113,113,.1)}
-  select{background:#0a101c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer}
-  .muted{color:var(--dim)}
-  .feed{max-height:320px;overflow-y:auto;font-size:12.5px}
-  .feed .row{padding:6px 0;border-bottom:1px solid #131c2b;display:flex;gap:10px}
-  .feed .t{color:var(--dim);white-space:nowrap;font-size:11.5px}
-  .empty{color:var(--dim);font-size:13px;padding:16px 0;text-align:center}
-  .mono{font-family:"SF Mono",Menlo,Consolas,monospace}
-  .actions{display:flex;gap:5px;flex-wrap:wrap}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--dim);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;border-bottom:1px solid var(--line)}
+  td{padding:10px;border-bottom:1px solid #131b28;vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:#0c1420}
+  .pill{font-size:10.5px;padding:3px 9px;border-radius:100px;font-weight:600}
+  .pill.free{background:rgba(125,139,160,.14);color:var(--dim)}
+  .pill.pro{background:rgba(34,211,170,.14);color:var(--accent2)}
+  .pill.admin{background:rgba(75,140,247,.16);color:#7fb0ff}
+  .pill.blocked{background:rgba(246,104,94,.14);color:var(--red)}
+  .pill.ok{background:rgba(55,214,111,.13);color:var(--green)}
+  button{font-size:11.5px;border:1px solid var(--line2);background:transparent;color:var(--text);border-radius:7px;padding:5px 11px;cursor:pointer;transition:.15s;font-weight:500}
+  button:hover{border-color:var(--accent);background:rgba(75,140,247,.08)}
+  button.danger{color:var(--red);border-color:rgba(246,104,94,.28)}
+  button.danger:hover{background:rgba(246,104,94,.1)}
+  select{background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer}
+  select:focus{outline:none;border-color:var(--accent)}
+  .muted{color:var(--dim)}.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .feed{max-height:300px;overflow-y:auto}
+  .feed .row{padding:8px 0;border-bottom:1px solid #131b28;display:flex;gap:12px;align-items:baseline;font-size:12.5px}
+  .feed .row:last-child{border-bottom:0}
+  .feed .t{color:var(--dim);white-space:nowrap;font-size:11px;min-width:56px}
+  .empty{color:var(--dim);font-size:12.5px;padding:22px 0;text-align:center}
+  .hint{font-size:11px;color:var(--dim);margin-top:9px}
 </style>
 </head>
 <body>
   <div class="top">
-    <div class="logo"><span class="dot"></span> Kali-Cloud · <span class="muted" style="font-weight:600">Admin</span></div>
-    <div class="r">
-      <span class="muted mono" id="clock" style="font-size:12px"></span>
-      <a href="/app">← App</a>
-      <a href="#" id="logout">Logout</a>
-    </div>
+    <div class="logo"><span class="dot"></span> Kali-Cloud <span class="sub">· Admin</span></div>
+    <div class="r"><span class="mono" id="clock"></span><a href="/app">App ↗</a><a href="#" id="logout">Logout</a></div>
   </div>
 
   <div class="wrap">
     <div class="stats">
       <div class="stat"><div class="n" id="s-users">–</div><div class="l">Total users</div></div>
-      <div class="stat"><div class="n" id="s-live" style="color:var(--green)">–</div><div class="l">🟢 Live now</div></div>
-      <div class="stat"><div class="n" id="s-today">–</div><div class="l">Logins today</div></div>
-      <div class="stat"><div class="n" id="s-time">–</div><div class="l">Total usage</div></div>
+      <div class="stat g"><div class="n" id="s-live" style="color:var(--green)">–</div><div class="l">Live now</div></div>
+      <div class="stat a"><div class="n" id="s-today">–</div><div class="l">Logins today</div></div>
+      <div class="stat p"><div class="n" id="s-time">–</div><div class="l">Total usage</div></div>
     </div>
 
     <div class="grid2">
       <div class="card">
-        <h2><span class="t">📈 Activity (last 7 days)</span></h2>
-        <div class="chart" id="chart"></div>
+        <h2><span class="t">📈 Activity</span><span class="sub">last 7 days</span></h2>
+        <div class="chartbox">
+          <div class="grid-lines"><span></span><span></span><span></span><span></span></div>
+          <div class="chart" id="chart"></div>
+        </div>
         <div class="legend"><span><i style="background:var(--green)"></i>Signups</span><span><i style="background:var(--accent)"></i>Logins</span></div>
       </div>
       <div class="card">
-        <h2><span class="t">🥧 Plan distribution</span></h2>
+        <h2><span class="t">🧩 Plans</span></h2>
         <div class="dist" id="dist"></div>
-        <h2 style="margin:20px 0 10px"><span class="t">⚙️ Usage totals</span></h2>
-        <div style="display:flex;gap:20px;font-size:13px">
-          <div><div class="muted" style="font-size:11px">Boxes launched</div><div style="font-size:20px;font-weight:800" id="t-launch">–</div></div>
-          <div><div class="muted" style="font-size:11px">Avg session</div><div style="font-size:20px;font-weight:800" id="t-avg">–</div></div>
-          <div><div class="muted" style="font-size:11px">Blocked</div><div style="font-size:20px;font-weight:800;color:var(--red)" id="t-blocked">–</div></div>
+        <div class="kpis">
+          <div class="kpi"><div class="kl">Launched</div><div class="kv" id="t-launch">–</div></div>
+          <div class="kpi"><div class="kl">Avg session</div><div class="kv" id="t-avg">–</div></div>
+          <div class="kpi"><div class="kl">Blocked</div><div class="kv" id="t-blocked" style="color:var(--red)">–</div></div>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <h2><span class="t"><span class="live-dot"></span> Live sessions <span class="muted" id="live-count"></span></span></h2>
-      <div id="live-wrap"><div class="empty">No one is online right now.</div></div>
+    <div class="card tight">
+      <h2><span class="t"><span class="live-dot"></span> Live sessions</span><span class="sub" id="live-count"></span></h2>
+      <div id="live-wrap"><div class="empty">Nobody online right now.</div></div>
     </div>
 
     <div class="card">
       <h2><span class="t">👥 Users</span>
-        <span class="actions"><a href="/api/admin/export/users.csv" download><button>⬇ Users CSV</button></a>
-        <a href="/api/admin/export/activity.csv" download><button>⬇ Activity CSV</button></a></span>
+        <span class="actions"><a href="/api/admin/export/users.csv" download><button>⬇ Users</button></a>
+        <a href="/api/admin/export/activity.csv" download><button>⬇ Activity</button></a></span>
       </h2>
       <div style="overflow-x:auto"><table id="users">
         <thead><tr><th>Email</th><th>Plan</th><th>Status</th><th>Last IP</th><th>Last seen</th><th>Logins</th><th>Live</th><th>Actions</th></tr></thead>
         <tbody></tbody>
       </table></div>
-      <div class="muted" style="font-size:11px;margin-top:8px">Tip: change a user's plan from the dropdown — it saves instantly.</div>
+      <div class="hint">Change a plan from the dropdown — it saves instantly.</div>
     </div>
 
     <div class="grid2">
-      <div class="card">
+      <div class="card tight">
         <h2><span class="t">🚫 Banned IPs</span></h2>
-        <div id="banned-wrap"><div class="empty">No IPs banned.</div></div>
+        <div id="banned-wrap"><div class="empty">None banned.</div></div>
       </div>
-      <div class="card">
+      <div class="card tight">
         <h2><span class="t">📜 Recent activity</span></h2>
         <div class="feed" id="feed"><div class="empty">No activity yet.</div></div>
       </div>
@@ -137,7 +163,7 @@ const api=(p,o)=>fetch(p,o).then(r=>r.json());
 const esc=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const fmtWhen=(t)=>{ if(!t)return '—'; const s=Math.floor((Date.now()-t)/1000);
   if(s<60)return s+'s ago'; if(s<3600)return Math.floor(s/60)+'m ago'; if(s<86400)return Math.floor(s/3600)+'h ago'; return new Date(t).toLocaleDateString(); };
-const fmtDur=(ms)=>{ const s=Math.floor(ms/1000); if(s<60)return s+'s'; const m=Math.floor(s/60); if(m<60)return m+'m'; const h=Math.floor(m/60); return h+'h '+(m%60)+'m'; };
+const fmtDur=(ms)=>{ const s=Math.floor(ms/1000); if(s<60)return s+'s'; const m=Math.floor(s/60); if(m<60)return m+'m'; const h=Math.floor(m/60); return h+'h'+(m%60?' '+(m%60)+'m':''); };
 
 async function guard(){
   const me=await api('/api/auth/me').catch(()=>({}));
@@ -146,20 +172,23 @@ async function guard(){
 }
 
 function renderCharts(users, act){
-  // 7-day buckets
   const days=[]; const now=new Date(); now.setHours(0,0,0,0);
   for(let i=6;i>=0;i--){ const d=new Date(now); d.setDate(d.getDate()-i); days.push({key:d.getTime(), label:d.toLocaleDateString(undefined,{weekday:'short'}), signups:0, logins:0}); }
   const dayOf=(t)=>{ const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
-  for(const e of act){ const b=days.find(x=>x.key===dayOf(e.t)); if(!b)continue; if(e.type==='signup')b.signups++; if(e.type==='login')b.logins++; }
-  const max=Math.max(1,...days.map(d=>Math.max(d.signups,d.logins)));
-  $('chart').innerHTML=days.map(d=>`<div class="bar" title="${d.label}: ${d.logins} logins, ${d.signups} signups">
-    <div class="v">${d.logins+d.signups||''}</div>
-    <div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center;height:100%">
-      <div class="col g" style="height:${d.signups/max*100}%;width:12px"></div>
-      <div class="col" style="height:${d.logins/max*100}%;width:12px"></div>
-    </div><div class="d">${d.label}</div></div>`).join('');
+  for(const e of act){ const b=days.find(x=>x.key===dayOf(e.t)); if(!b)continue; if(e.type==='signup')b.signups++; else if(e.type==='login')b.logins++; }
+  const max=Math.max(3,...days.map(d=>Math.max(d.signups,d.logins)));
+  $('chart').innerHTML=days.map(d=>{
+    const tot=d.signups+d.logins;
+    return `<div class="bar" title="${d.label}: ${d.logins} logins, ${d.signups} signups">
+      <div class="track"></div>
+      ${tot?`<div class="val">${tot}</div>`:''}
+      <div class="cols">
+        <div class="col s" style="height:${d.signups/max*100}%"></div>
+        <div class="col l" style="height:${d.logins/max*100}%"></div>
+      </div>
+      <div class="lab">${d.label}</div></div>`;
+  }).join('');
 
-  // plan distribution
   const plans={free:0,pro:0,admin:0}; users.forEach(u=>plans[u.plan]=(plans[u.plan]||0)+1);
   const tot=Math.max(1,users.length);
   const col={free:'var(--dim)',pro:'var(--accent2)',admin:'var(--accent)'};
@@ -167,14 +196,12 @@ function renderCharts(users, act){
     <span class="track"><span class="fill" style="width:${plans[p]/tot*100}%;background:${col[p]}"></span></span>
     <span class="cnt">${plans[p]}</span></div>`).join('');
 
-  // usage totals
   const launches=act.filter(e=>e.type==='launch').length;
   const ends=act.filter(e=>e.type==='end'&&e.durMs);
   const totalMs=ends.reduce((a,e)=>a+e.durMs,0);
-  const avg=ends.length?totalMs/ends.length:0;
   $('s-time').textContent=fmtDur(totalMs);
   $('t-launch').textContent=launches;
-  $('t-avg').textContent=ends.length?fmtDur(avg):'–';
+  $('t-avg').textContent=ends.length?fmtDur(totalMs/ends.length):'–';
   $('t-blocked').textContent=users.filter(u=>u.blocked).length;
 }
 
@@ -183,19 +210,18 @@ function renderUsers(users, active){
   for(const x of users){
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td>${esc(x.email)}</td>
+      <td style="font-weight:500">${esc(x.email)}</td>
       <td><select data-email="${esc(x.email)}" class="plan-sel" ${x.plan==='admin'?'disabled':''}>
-        ${['free','pro','admin'].map(p=>`<option ${x.plan===p?'selected':''}>${p}</option>`).join('')}
-      </select></td>
+        ${['free','pro','admin'].map(p=>`<option ${x.plan===p?'selected':''}>${p}</option>`).join('')}</select></td>
       <td>${x.blocked?'<span class="pill blocked">blocked</span>':'<span class="pill ok">active</span>'}</td>
-      <td class="muted mono" style="font-size:12px">${x.lastIp?esc(x.lastIp):'—'}</td>
+      <td class="muted mono">${x.lastIp?esc(x.lastIp):'—'}</td>
       <td class="muted">${fmtWhen(x.lastLoginAt)}</td>
       <td class="muted">${x.loginCount||0}</td>
       <td>${(active[x.email]||0)?`<span style="color:var(--green)">● ${active[x.email]}</span>`:'<span class="muted">—</span>'}</td>
       <td class="actions">${x.plan==='admin'?'<span class="muted">—</span>':(x.blocked
         ? `<button data-unblock="${esc(x.email)}">Unblock</button>`
         : `<button class="danger" data-block="${esc(x.email)}">Block</button>`)}
-        ${x.lastIp?`<button class="danger" data-banip="${esc(x.lastIp)}" title="Ban ${esc(x.lastIp)}">Ban IP</button>`:''}</td>`;
+        ${x.lastIp?`<button class="danger" data-banip="${esc(x.lastIp)}">Ban IP</button>`:''}</td>`;
     tb.appendChild(tr);
   }
 }
@@ -208,7 +234,6 @@ async function loadAll(){
   const users=u.users, live=l.sessions||[], act=a.activity||[], bannedIps=(bip&&bip.ips)||[];
   const activeByEmail={}; users.forEach(x=>{ if(x.activeSessions)activeByEmail[x.email]=x.activeSessions; });
 
-  // stats
   $('s-users').textContent=users.length;
   $('s-live').textContent=live.length;
   const dayStart=new Date(); dayStart.setHours(0,0,0,0);
@@ -216,33 +241,28 @@ async function loadAll(){
 
   renderCharts(users, act);
 
-  // live sessions
-  $('live-count').textContent=live.length?`(${live.length})`:'';
-  $('live-wrap').innerHTML=!live.length?'<div class="empty">No one is online right now.</div>':
+  $('live-count').textContent=live.length?`${live.length} online`:'';
+  $('live-wrap').innerHTML=!live.length?'<div class="empty">Nobody online right now.</div>':
     '<div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Plan</th><th>Quality</th><th>IP</th><th>Online for</th></tr></thead><tbody>'+
-    live.map(s=>`<tr><td>${esc(s.email)}</td><td><span class="pill ${s.plan}">${s.plan}</span></td><td class="muted">${esc(s.profile||'—')}</td><td class="muted mono" style="font-size:12px">${esc(s.ip||'—')}</td><td style="color:var(--green)">${fmtDur(s.durationMs)}</td></tr>`).join('')+
+    live.map(s=>`<tr><td style="font-weight:500">${esc(s.email)}</td><td><span class="pill ${s.plan}">${s.plan}</span></td><td class="muted">${esc(s.profile||'—')}</td><td class="muted mono">${esc(s.ip||'—')}</td><td style="color:var(--green);font-weight:600">${fmtDur(s.durationMs)}</td></tr>`).join('')+
     '</tbody></table></div>';
 
-  // users table — skip re-render if admin is mid-interaction with a dropdown
   const ae=document.activeElement;
   if(!(ae&&ae.classList&&ae.classList.contains('plan-sel'))) renderUsers(users, activeByEmail);
 
-  // banned IPs
   $('banned-wrap').innerHTML=bannedIps.length
-    ? bannedIps.map(ip=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #131c2b"><span class="muted mono">${esc(ip)}</span><button data-unbanip="${esc(ip)}">Unban</button></div>`).join('')
-    : '<div class="empty">No IPs banned.</div>';
+    ? bannedIps.map(ip=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #131b28"><span class="mono">${esc(ip)}</span><button data-unbanip="${esc(ip)}">Unban</button></div>`).join('')
+    : '<div class="empty">None banned.</div>';
 
-  // activity feed
-  const icon={signup:'✨ signed up',login:'🔑 signed in',launch:'🚀 launched a box',end:'⏹ box ended',blocked:'⛔ blocked',unblocked:'✅ unblocked','ip-banned':'🚫 IP banned'};
+  const icon={signup:'signed up ✨',login:'signed in 🔑',launch:'launched a box 🚀',end:'box ended ⏹',blocked:'blocked ⛔',unblocked:'unblocked ✅','ip-banned':'IP banned 🚫'};
   $('feed').innerHTML=!act.length?'<div class="empty">No activity yet.</div>':
-    act.slice(0,120).map(e=>{ const what=icon[e.type]||e.type; const extra=e.type==='end'&&e.durMs?` <span class="muted">(${fmtDur(e.durMs)})</span>`:'';
+    act.slice(0,100).map(e=>{ const what=icon[e.type]||e.type; const extra=e.type==='end'&&e.durMs?` <span class="muted">(${fmtDur(e.durMs)})</span>`:'';
       return `<div class="row"><span class="t">${fmtWhen(e.t)}</span><span><b>${esc(e.email||'?')}</b> ${what}${extra}</span></div>`; }).join('');
 }
 
-// actions
 document.addEventListener('click', async (ev)=>{
   const b=ev.target;
-  if(b.dataset.block){ if(confirm('Block '+b.dataset.block+'? Their running boxes will be stopped.')){ await api('/api/admin/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.block})}); loadAll(); } }
+  if(b.dataset.block){ if(confirm('Block '+b.dataset.block+'? Their running boxes stop.')){ await api('/api/admin/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.block})}); loadAll(); } }
   if(b.dataset.unblock){ await api('/api/admin/unblock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.unblock})}); loadAll(); }
   if(b.dataset.banip){ if(confirm('Ban IP '+b.dataset.banip+'?')){ const r=await api('/api/admin/ban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:b.dataset.banip})}); if(!r.ok)alert(r.error); loadAll(); } }
   if(b.dataset.unbanip){ await api('/api/admin/unban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:b.dataset.unbanip})}); loadAll(); }
@@ -258,7 +278,6 @@ document.addEventListener('change', async (ev)=>{
 });
 $('logout').onclick=async(e)=>{ e.preventDefault(); await api('/api/auth/logout',{method:'POST'}); location.href='/'; };
 setInterval(()=>{ $('clock').textContent=new Date().toLocaleTimeString(); }, 1000);
-
 (async()=>{ if(await guard()){ loadAll(); setInterval(loadAll, 6000); } })();
 </script>
 </body>
