@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin — Kali-Cloud</title>
+<style>
+  :root{--bg:#0a0e14;--panel:#0c1220;--line:#1e2836;--accent:#367bf0;--accent2:#00d4aa;--text:#e6edf3;--dim:#8b98a9;--red:#f87171;--amber:#fbbf24;--green:#4ade80}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  a{color:var(--accent2);text-decoration:none}
+  .top{border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800}
+  .logo .dot{width:11px;height:11px;border-radius:50%;background:var(--accent2);box-shadow:0 0 12px var(--accent2)}
+  .wrap{max-width:1200px;margin:0 auto;padding:22px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .stat .n{font-size:28px;font-weight:800}
+  .stat .l{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px}
+  .card h2{font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid #131c2b;vertical-align:middle}
+  tr:hover td{background:#0a101c}
+  .pill{font-size:11px;padding:2px 9px;border-radius:100px;font-weight:600}
+  .pill.free{background:rgba(139,152,169,.15);color:var(--dim)}
+  .pill.pro{background:rgba(0,212,170,.15);color:var(--accent2)}
+  .pill.admin{background:rgba(54,123,240,.18);color:#7aa7f5}
+  .pill.blocked{background:rgba(248,113,113,.15);color:var(--red)}
+  .pill.ok{background:rgba(74,222,128,.14);color:var(--green)}
+  button{font-size:12px;border:1px solid var(--line);background:transparent;color:var(--text);border-radius:7px;padding:5px 11px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.danger{color:var(--red);border-color:rgba(248,113,113,.3)}
+  button.danger:hover{background:rgba(248,113,113,.1)}
+  select{background:#0a101c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
+  .muted{color:var(--dim)}
+  .feed{max-height:340px;overflow-y:auto;font-family:"SF Mono",Menlo,monospace;font-size:12.5px}
+  .feed .row{padding:5px 0;border-bottom:1px solid #131c2b;display:flex;gap:10px}
+  .feed .t{color:var(--dim);white-space:nowrap}
+  .empty{color:var(--dim);font-size:13px;padding:14px 0}
+  .refresh{font-size:11px;color:var(--dim)}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="logo"><span class="dot"></span> Kali-Cloud · <span class="muted" style="font-weight:600">Admin</span></div>
+    <div style="display:flex;gap:16px;align-items:center">
+      <span class="refresh" id="refresh">auto-refresh: on</span>
+      <a href="/app">← App</a>
+      <a href="#" id="logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat"><div class="n" id="s-users">–</div><div class="l">Total users</div></div>
+      <div class="stat"><div class="n" id="s-live" style="color:var(--green)">–</div><div class="l">Live now</div></div>
+      <div class="stat"><div class="n" id="s-today">–</div><div class="l">Logins today</div></div>
+      <div class="stat"><div class="n" id="s-blocked" style="color:var(--red)">–</div><div class="l">Blocked</div></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="live-dot"></span> Live sessions <span class="refresh" id="live-count"></span></h2>
+      <div id="live-wrap"><div class="empty">No one is online right now.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>👥 Users</h2>
+      <div style="overflow-x:auto"><table id="users">
+        <thead><tr><th>Email</th><th>Plan</th><th>Status</th><th>Joined</th><th>Last seen</th><th>Logins</th><th>Live</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h2>📜 Recent activity</h2>
+      <div class="feed" id="feed"><div class="empty">No activity yet.</div></div>
+    </div>
+  </div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+const api = (p,o)=>fetch(p,o).then(r=>r.json());
+const fmtWhen = (t)=>{ if(!t) return '—'; const d=new Date(t), now=Date.now(), s=Math.floor((now-t)/1000);
+  if(s<60) return s+'s ago'; if(s<3600) return Math.floor(s/60)+'m ago'; if(s<86400) return Math.floor(s/3600)+'h ago';
+  return d.toLocaleDateString(); };
+const fmtDur = (ms)=>{ const s=Math.floor(ms/1000); if(s<60) return s+'s'; const m=Math.floor(s/60); if(m<60) return m+'m '+(s%60)+'s'; return Math.floor(m/60)+'h '+(m%60)+'m'; };
+const esc = (s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+async function guard(){
+  const me = await api('/api/auth/me').catch(()=>({}));
+  if(!me.ok || !me.user || me.user.plan!=='admin'){ location.href='/login'; return false; }
+  return true;
+}
+
+async function loadAll(){
+  const [u,l,a] = await Promise.all([
+    api('/api/admin/users'), api('/api/admin/live'), api('/api/admin/activity?limit=120')
+  ]);
+  if(!u.ok) return;
+  const users=u.users, live=l.sessions||[], act=a.activity||[];
+
+  // stats
+  $('s-users').textContent=users.length;
+  $('s-live').textContent=live.length;
+  $('s-blocked').textContent=users.filter(x=>x.blocked).length;
+  const dayStart=new Date(); dayStart.setHours(0,0,0,0);
+  $('s-today').textContent=act.filter(e=>e.type==='login' && e.t>=dayStart.getTime()).length;
+
+  // live sessions
+  $('live-count').textContent = live.length ? `(${live.length})` : '';
+  if(!live.length){ $('live-wrap').innerHTML='<div class="empty">No one is online right now.</div>'; }
+  else {
+    let h='<div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Plan</th><th>Quality</th><th>Started</th><th>Online for</th></tr></thead><tbody>';
+    for(const s of live){ h+=`<tr><td>${esc(s.email)}</td><td><span class="pill ${s.plan}">${s.plan}</span></td><td class="muted">${esc(s.profile||'—')}</td><td class="muted">${fmtWhen(s.startedAt)}</td><td style="color:var(--green)">${fmtDur(s.durationMs)}</td></tr>`; }
+    $('live-wrap').innerHTML=h+'</tbody></table></div>';
+  }
+
+  // users table
+  const tb=$('users').querySelector('tbody'); tb.innerHTML='';
+  for(const x of users){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${esc(x.email)}</td>
+      <td><select data-email="${esc(x.email)}" class="plan-sel" ${x.plan==='admin'?'disabled':''}>
+        ${['free','pro','admin'].map(p=>`<option ${x.plan===p?'selected':''}>${p}</option>`).join('')}
+      </select></td>
+      <td>${x.blocked?'<span class="pill blocked">blocked</span>':'<span class="pill ok">active</span>'}</td>
+      <td class="muted">${fmtWhen(x.createdAt)}</td>
+      <td class="muted">${fmtWhen(x.lastLoginAt)}</td>
+      <td class="muted">${x.loginCount||0}</td>
+      <td>${x.activeSessions?`<span style="color:var(--green)">● ${x.activeSessions}</span>`:'<span class="muted">—</span>'}</td>
+      <td>${x.plan==='admin'?'<span class="muted">—</span>':(x.blocked
+        ? `<button data-unblock="${esc(x.email)}">Unblock</button>`
+        : `<button class="danger" data-block="${esc(x.email)}">Block</button>`)}</td>`;
+    tb.appendChild(tr);
+  }
+
+  // activity feed
+  if(!act.length){ $('feed').innerHTML='<div class="empty">No activity yet.</div>'; }
+  else {
+    const icon={login:'🔑 signed in',launch:'🚀 launched a box',end:'⏹ box ended',blocked:'⛔ blocked',unblocked:'✅ unblocked'};
+    $('feed').innerHTML=act.map(e=>{
+      const what=icon[e.type]||e.type;
+      const extra=e.type==='end'&&e.durMs?` <span class="muted">(${fmtDur(e.durMs)})</span>`:'';
+      return `<div class="row"><span class="t">${fmtWhen(e.t)}</span><span><b>${esc(e.email||'?')}</b> ${what}${extra}</span></div>`;
+    }).join('');
+  }
+}
+
+// event delegation for actions
+document.addEventListener('click', async (ev)=>{
+  const b=ev.target;
+  if(b.dataset.block){ if(confirm('Block '+b.dataset.block+'? Their running boxes will be stopped.')){ await api('/api/admin/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.block})}); loadAll(); } }
+  if(b.dataset.unblock){ await api('/api/admin/unblock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.unblock})}); loadAll(); }
+});
+document.addEventListener('change', async (ev)=>{
+  if(ev.target.classList.contains('plan-sel')){
+    const email=ev.target.dataset.email, plan=ev.target.value;
+    await api('/api/admin/set-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan})});
+    loadAll();
+  }
+});
+$('logout').onclick=async(e)=>{ e.preventDefault(); await api('/api/auth/logout',{method:'POST'}); location.href='/'; };
+
+(async()=>{ if(await guard()){ loadAll(); setInterval(loadAll, 5000); } })();
+</script>
+</body>
+</html>

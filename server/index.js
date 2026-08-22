@@ -98,7 +98,9 @@ async function stopSession(sid, reason = "stopped") {
   usedPorts.delete(s.port);
   try { await docker(["rm", "-f", s.containerName]); } catch {}
   if (s.network) { try { await docker(["network", "rm", s.network]); } catch {} }
-  console.log(`[session ${sid.slice(0,8)}] ${reason}`);
+  const durMs = Date.now() - (s.createdAt || Date.now());
+  auth.logActivity({ email: s.email, type: "end", sid, durMs, reason });
+  console.log(`[session ${sid.slice(0,8)}] ${reason} (${Math.round(durMs/1000)}s)`);
 }
 
 // one active box per user (prevents resource abuse); stop the old one first
@@ -208,6 +210,12 @@ app.get(["/app", "/app.html"], (req, res) => {
   res.sendFile(path.join(WEB, "app.html"));
 });
 app.get(["/login", "/login.html"], (_req, res) => res.sendFile(path.join(WEB, "login.html")));
+app.get("/admin", (req, res) => {
+  const u = auth.currentUser(req);
+  if (!u) return res.redirect("/login");
+  if (u.plan !== "admin") return res.status(403).send("Admins only.");
+  res.sendFile(path.join(WEB, "admin.html"));
+});
 
 // --- desktop reverse proxy (auth-gated) --------------------------------
 // Only the session's owner (or an admin) may reach /desktop/:sid/* — the
@@ -266,6 +274,7 @@ app.post("/api/session/start", auth.requireAuth, async (req, res) => {
 
     const profileName = (req.body && req.body.profile) || DEFAULT_PROFILE;
     const { sid, port, profile, plan, ttlMs } = await startSession(req.user, profileName);
+    auth.logActivity({ email: req.user.email, type: "launch", sid, profile: profileName });
     // relative URL through our reverse proxy — works on localhost AND the live
     // domain, over one HTTPS origin. `path` tells noVNC where to open its WebSocket.
     const wsPath = encodeURIComponent(`desktop/${sid}/websockify`);
@@ -301,6 +310,48 @@ app.post("/api/admin/set-plan", auth.requireAuth, (req, res) => {
     const u = auth.setUserPlan(email, plan);
     res.json({ ok: true, email: u.email, plan: u.plan });
   } catch (e) { res.status(400).json({ ok: false, error: String(e.message || e) }); }
+});
+
+// --- admin dashboard API (admins only) ---------------------------------
+// count each user's currently-active boxes
+function activeCountByEmail() {
+  const m = {};
+  for (const s of sessions.values()) m[s.email] = (m[s.email] || 0) + 1;
+  return m;
+}
+
+app.get("/api/admin/users", auth.requireAdmin, (_req, res) => {
+  const active = activeCountByEmail();
+  res.json({ ok: true, users: auth.listUsers().map(u => ({ ...u, activeSessions: active[u.email] || 0 })) });
+});
+
+app.get("/api/admin/live", auth.requireAdmin, (_req, res) => {
+  const now = Date.now();
+  res.json({ ok: true, sessions: [...sessions.values()].map(s => ({
+    email: s.email, plan: s.plan, profile: s.profile, startedAt: s.createdAt, durationMs: now - s.createdAt,
+  })).sort((a, b) => a.startedAt - b.startedAt) });
+});
+
+app.get("/api/admin/activity", auth.requireAdmin, (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 200, 1000);
+  res.json({ ok: true, activity: auth.getActivity(limit) });
+});
+
+// block a user (and immediately kill their running boxes)
+app.post("/api/admin/block", auth.requireAdmin, async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    auth.setBlocked(email, true);
+    for (const s of [...sessions.values()]) {
+      if (s.email && s.email.toLowerCase() === String(email).toLowerCase()) await stopSession(s.id, "user blocked");
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(400).json({ ok: false, error: String(e.message || e) }); }
+});
+
+app.post("/api/admin/unblock", auth.requireAdmin, (req, res) => {
+  try { auth.setBlocked((req.body || {}).email, false); res.json({ ok: true }); }
+  catch (e) { res.status(400).json({ ok: false, error: String(e.message || e) }); }
 });
 
 app.get("/api/health", async (_req, res) => {

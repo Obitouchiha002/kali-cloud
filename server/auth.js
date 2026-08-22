@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const SECRET_FILE = path.join(DATA_DIR, "secret");
+const ACTIVITY_FILE = path.join(DATA_DIR, "activity.json");
 
 // the account that automatically gets the full-access Admin plan
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "vk1234888i@gmail.com").toLowerCase();
@@ -26,6 +27,17 @@ if (!SECRET) { SECRET = crypto.randomBytes(32).toString("hex"); fs.writeFileSync
 
 function loadUsers() { try { return JSON.parse(fs.readFileSync(USERS_FILE, "utf8")); } catch { return {}; } }
 function saveUsers(u) { fs.writeFileSync(USERS_FILE, JSON.stringify(u, null, 2), { mode: 0o600 }); }
+
+// --- activity log (who came, when, how long) ---------------------------------
+function loadActivity() { try { return JSON.parse(fs.readFileSync(ACTIVITY_FILE, "utf8")); } catch { return []; } }
+function saveActivity(a) { fs.writeFileSync(ACTIVITY_FILE, JSON.stringify(a), { mode: 0o600 }); }
+export function logActivity(ev) {
+  const a = loadActivity();
+  a.push({ t: Date.now(), ...ev });
+  if (a.length > 5000) a.splice(0, a.length - 5000); // cap the log size
+  saveActivity(a);
+}
+export function getActivity(limit = 200) { return loadActivity().slice(-limit).reverse(); }
 
 function hashPassword(pw) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -107,9 +119,14 @@ export function login({ email, password }) {
   const users = loadUsers();
   const user = users[email];
   if (!user || !verifyPassword(password, user.passHash)) throw new Error("Wrong email or password.");
+  if (user.blocked) throw new Error("This account has been blocked. Contact support.");
   // keep admin plan in sync with ADMIN_EMAIL
   const wantPlan = planForEmail(email);
-  if (wantPlan === "admin" && user.plan !== "admin") { user.plan = "admin"; users[email] = user; saveUsers(users); }
+  if (wantPlan === "admin" && user.plan !== "admin") user.plan = "admin";
+  user.lastLoginAt = Date.now();
+  user.loginCount = (user.loginCount || 0) + 1;
+  users[email] = user; saveUsers(users);
+  logActivity({ email, type: "login" });
   return { id: user.id, email: user.email, plan: user.plan };
 }
 
@@ -128,7 +145,8 @@ export function currentUser(req) {
   // re-read the live plan (in case it changed) — cheap for a small user base
   const users = loadUsers();
   const u = Object.values(users).find((x) => x.id === p.uid);
-  return u ? { id: u.id, email: u.email, plan: u.plan } : null;
+  if (!u || u.blocked) return null; // blocked users are instantly locked out
+  return { id: u.id, email: u.email, plan: u.plan };
 }
 
 // express middleware: attach req.user, 401 if required and missing
@@ -144,4 +162,30 @@ export function setUserPlan(email, plan) {
   if (!users[email]) throw new Error("No such user.");
   users[email].plan = plan; saveUsers(users);
   return users[email];
+}
+
+// --- admin helpers -----------------------------------------------------------
+export function setBlocked(email, blocked) {
+  email = email.toLowerCase();
+  const users = loadUsers();
+  if (!users[email]) throw new Error("No such user.");
+  if (users[email].email.toLowerCase() === ADMIN_EMAIL) throw new Error("You can't block the admin account.");
+  users[email].blocked = !!blocked; saveUsers(users);
+  logActivity({ email, type: blocked ? "blocked" : "unblocked" });
+  return users[email];
+}
+
+export function listUsers() {
+  return Object.values(loadUsers()).map((u) => ({
+    id: u.id, email: u.email, plan: u.plan, blocked: !!u.blocked,
+    createdAt: u.createdAt || null, lastLoginAt: u.lastLoginAt || null, loginCount: u.loginCount || 0,
+  })).sort((a, b) => (b.lastLoginAt || 0) - (a.lastLoginAt || 0));
+}
+
+// express middleware: admin only
+export function requireAdmin(req, res, next) {
+  const u = currentUser(req);
+  if (!u) return res.status(401).json({ ok: false, error: "Please sign in." });
+  if (u.plan !== "admin") return res.status(403).json({ ok: false, error: "Admins only." });
+  req.user = u; next();
 }
