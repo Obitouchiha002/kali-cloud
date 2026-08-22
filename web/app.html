@@ -48,6 +48,7 @@
       <span class="soundToggle" id="soundToggle">🔊</span>
       <span id="email"></span>
       <span class="badge" id="planBadge">…</span>
+      <a class="link" id="adminLink" href="/admin" style="display:none;color:#00d4aa;text-decoration:none">⚙ Dashboard</a>
       <span class="link" id="logout">Sign out</span>
     </div>
   </div>
@@ -127,7 +128,7 @@ async function loadMe(){
   ];
   $("features").innerHTML=feats.map(([t,on])=>`<li class="${on?"":"off"}">${t}</li>`).join("");
   if(PLAN.id==="free")$("upsell").style.display="block";
-  if(PLAN.id==="admin")$("adminbox").style.display="block";
+  if(PLAN.id==="admin"){$("adminbox").style.display="block";$("adminLink").style.display="inline";}
   [...$("quality").options].forEach(o=>{if(o.value!=="auto"&&!PLAN.profiles.includes(o.value))o.disabled=true;});
   refreshDetected();
 }
