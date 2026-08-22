@@ -39,6 +39,25 @@ export function logActivity(ev) {
 }
 export function getActivity(limit = 200) { return loadActivity().slice(-limit).reverse(); }
 
+// --- IP bans -----------------------------------------------------------------
+const BANNED_IPS_FILE = path.join(DATA_DIR, "banned-ips.json");
+function loadBannedIps() { try { return JSON.parse(fs.readFileSync(BANNED_IPS_FILE, "utf8")); } catch { return []; } }
+function saveBannedIps(a) { fs.writeFileSync(BANNED_IPS_FILE, JSON.stringify(a), { mode: 0o600 }); }
+export function isIpBanned(ip) { return loadBannedIps().includes(ip); }
+export function listBannedIps() { return loadBannedIps(); }
+export function banIp(ip) {
+  ip = String(ip || "").trim(); if (!ip) throw new Error("No IP.");
+  const a = loadBannedIps(); if (!a.includes(ip)) { a.push(ip); saveBannedIps(a); logActivity({ type: "ip-banned", email: ip }); }
+}
+export function unbanIp(ip) { saveBannedIps(loadBannedIps().filter((x) => x !== ip)); }
+
+// record the last IP we saw a user from (shown in the admin dashboard)
+export function recordUserIp(email, ip) {
+  email = (email || "").toLowerCase();
+  const users = loadUsers();
+  if (users[email]) { users[email].lastIp = ip; saveUsers(users); }
+}
+
 function hashPassword(pw) {
   const salt = crypto.randomBytes(16).toString("hex");
   const dk = crypto.scryptSync(pw, salt, 64).toString("hex");
@@ -177,7 +196,7 @@ export function setBlocked(email, blocked) {
 
 export function listUsers() {
   return Object.values(loadUsers()).map((u) => ({
-    id: u.id, email: u.email, plan: u.plan, blocked: !!u.blocked,
+    id: u.id, email: u.email, plan: u.plan, blocked: !!u.blocked, lastIp: u.lastIp || null,
     createdAt: u.createdAt || null, lastLoginAt: u.lastLoginAt || null, loginCount: u.loginCount || 0,
   })).sort((a, b) => (b.lastLoginAt || 0) - (a.lastLoginAt || 0));
 }

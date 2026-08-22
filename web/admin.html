@@ -69,11 +69,19 @@
     </div>
 
     <div class="card">
-      <h2>👥 Users</h2>
+      <h2 style="justify-content:space-between">👥 Users
+        <span><a href="/api/admin/export/users.csv" download><button>⬇ Users CSV</button></a>
+        <a href="/api/admin/export/activity.csv" download><button>⬇ Activity CSV</button></a></span>
+      </h2>
       <div style="overflow-x:auto"><table id="users">
-        <thead><tr><th>Email</th><th>Plan</th><th>Status</th><th>Joined</th><th>Last seen</th><th>Logins</th><th>Live</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Email</th><th>Plan</th><th>Status</th><th>Last IP</th><th>Last seen</th><th>Logins</th><th>Live</th><th>Actions</th></tr></thead>
         <tbody></tbody>
       </table></div>
+    </div>
+
+    <div class="card">
+      <h2>🚫 Banned IPs</h2>
+      <div id="banned-wrap"><div class="empty">No IPs banned.</div></div>
     </div>
 
     <div class="card">
@@ -98,11 +106,16 @@ async function guard(){
 }
 
 async function loadAll(){
-  const [u,l,a] = await Promise.all([
-    api('/api/admin/users'), api('/api/admin/live'), api('/api/admin/activity?limit=120')
+  const [u,l,a,bip] = await Promise.all([
+    api('/api/admin/users'), api('/api/admin/live'), api('/api/admin/activity?limit=120'), api('/api/admin/banned-ips')
   ]);
   if(!u.ok) return;
-  const users=u.users, live=l.sessions||[], act=a.activity||[];
+  const users=u.users, live=l.sessions||[], act=a.activity||[], bannedIps=(bip&&bip.ips)||[];
+
+  // banned IPs
+  $('banned-wrap').innerHTML = bannedIps.length
+    ? bannedIps.map(ip=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #131c2b"><span class="muted" style="font-family:monospace">${esc(ip)}</span><button data-unbanip="${esc(ip)}">Unban</button></div>`).join('')
+    : '<div class="empty">No IPs banned.</div>';
 
   // stats
   $('s-users').textContent=users.length;
@@ -115,8 +128,8 @@ async function loadAll(){
   $('live-count').textContent = live.length ? `(${live.length})` : '';
   if(!live.length){ $('live-wrap').innerHTML='<div class="empty">No one is online right now.</div>'; }
   else {
-    let h='<div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Plan</th><th>Quality</th><th>Started</th><th>Online for</th></tr></thead><tbody>';
-    for(const s of live){ h+=`<tr><td>${esc(s.email)}</td><td><span class="pill ${s.plan}">${s.plan}</span></td><td class="muted">${esc(s.profile||'—')}</td><td class="muted">${fmtWhen(s.startedAt)}</td><td style="color:var(--green)">${fmtDur(s.durationMs)}</td></tr>`; }
+    let h='<div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Plan</th><th>Quality</th><th>IP</th><th>Online for</th></tr></thead><tbody>';
+    for(const s of live){ h+=`<tr><td>${esc(s.email)}</td><td><span class="pill ${s.plan}">${s.plan}</span></td><td class="muted">${esc(s.profile||'—')}</td><td class="muted">${esc(s.ip||'—')}</td><td style="color:var(--green)">${fmtDur(s.durationMs)}</td></tr>`; }
     $('live-wrap').innerHTML=h+'</tbody></table></div>';
   }
 
@@ -130,13 +143,14 @@ async function loadAll(){
         ${['free','pro','admin'].map(p=>`<option ${x.plan===p?'selected':''}>${p}</option>`).join('')}
       </select></td>
       <td>${x.blocked?'<span class="pill blocked">blocked</span>':'<span class="pill ok">active</span>'}</td>
-      <td class="muted">${fmtWhen(x.createdAt)}</td>
+      <td class="muted">${x.lastIp?esc(x.lastIp):'—'}</td>
       <td class="muted">${fmtWhen(x.lastLoginAt)}</td>
       <td class="muted">${x.loginCount||0}</td>
       <td>${x.activeSessions?`<span style="color:var(--green)">● ${x.activeSessions}</span>`:'<span class="muted">—</span>'}</td>
       <td>${x.plan==='admin'?'<span class="muted">—</span>':(x.blocked
         ? `<button data-unblock="${esc(x.email)}">Unblock</button>`
-        : `<button class="danger" data-block="${esc(x.email)}">Block</button>`)}</td>`;
+        : `<button class="danger" data-block="${esc(x.email)}">Block</button>`)}
+        ${x.lastIp?`<button class="danger" data-banip="${esc(x.lastIp)}" title="Ban this IP">Ban IP</button>`:''}</td>`;
     tb.appendChild(tr);
   }
 
@@ -157,6 +171,8 @@ document.addEventListener('click', async (ev)=>{
   const b=ev.target;
   if(b.dataset.block){ if(confirm('Block '+b.dataset.block+'? Their running boxes will be stopped.')){ await api('/api/admin/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.block})}); loadAll(); } }
   if(b.dataset.unblock){ await api('/api/admin/unblock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.unblock})}); loadAll(); }
+  if(b.dataset.banip){ if(confirm('Ban IP '+b.dataset.banip+'? All requests + live boxes from it are blocked.')){ await api('/api/admin/ban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:b.dataset.banip})}); loadAll(); } }
+  if(b.dataset.unbanip){ await api('/api/admin/unban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:b.dataset.unbanip})}); loadAll(); }
 });
 document.addEventListener('change', async (ev)=>{
   if(ev.target.classList.contains('plan-sel')){

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "http-proxy": "^1.18.1"
+    "http-proxy": "^1.18.1",
+    "nodemailer": "^9.0.5"
   }
 }

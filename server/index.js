@@ -16,6 +16,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { planFor } from "./plans.js";
 import * as auth from "./auth.js";
+import * as mailer from "./mailer.js";
 import httpProxy from "http-proxy";
 
 const execFileP = promisify(execFile);
@@ -198,6 +199,12 @@ async function startSession(user, profileName = DEFAULT_PROFILE) {
 
 const app = express();
 app.disable("x-powered-by");
+app.set("trust proxy", true); // behind Traefik/Caddy — use X-Forwarded-For for the real IP
+// block banned IPs before anything else
+app.use((req, res, next) => {
+  if (auth.isIpBanned(req.ip)) return res.status(403).send("Access denied.");
+  next();
+});
 app.use(express.json());
 
 const WEB = path.join(__dirname, "..", "web");
@@ -240,13 +247,17 @@ app.use(express.static(WEB)); // landing, assets, legal, etc.
 app.post("/api/auth/register", (req, res) => {
   try {
     const user = auth.register(req.body || {});
+    auth.recordUserIp(user.email, req.ip);
+    auth.logActivity({ email: user.email, type: "signup", ip: req.ip });
     auth.issueSession(res, user);
+    mailer.notify("New signup", `${user.email} just signed up (IP ${req.ip}).`);
     res.json({ ok: true, user });
   } catch (e) { res.status(400).json({ ok: false, error: String(e.message || e) }); }
 });
 app.post("/api/auth/login", (req, res) => {
   try {
     const user = auth.login(req.body || {});
+    auth.recordUserIp(user.email, req.ip);
     auth.issueSession(res, user);
     res.json({ ok: true, user });
   } catch (e) { res.status(401).json({ ok: false, error: String(e.message || e) }); }
@@ -274,7 +285,8 @@ app.post("/api/session/start", auth.requireAuth, async (req, res) => {
 
     const profileName = (req.body && req.body.profile) || DEFAULT_PROFILE;
     const { sid, port, profile, plan, ttlMs } = await startSession(req.user, profileName);
-    auth.logActivity({ email: req.user.email, type: "launch", sid, profile: profileName });
+    const sObj = sessions.get(sid); if (sObj) sObj.ip = req.ip;
+    auth.logActivity({ email: req.user.email, type: "launch", sid, profile: profileName, ip: req.ip });
     // relative URL through our reverse proxy — works on localhost AND the live
     // domain, over one HTTPS origin. `path` tells noVNC where to open its WebSocket.
     const wsPath = encodeURIComponent(`desktop/${sid}/websockify`);
@@ -328,7 +340,7 @@ app.get("/api/admin/users", auth.requireAdmin, (_req, res) => {
 app.get("/api/admin/live", auth.requireAdmin, (_req, res) => {
   const now = Date.now();
   res.json({ ok: true, sessions: [...sessions.values()].map(s => ({
-    email: s.email, plan: s.plan, profile: s.profile, startedAt: s.createdAt, durationMs: now - s.createdAt,
+    email: s.email, plan: s.plan, profile: s.profile, ip: s.ip || null, startedAt: s.createdAt, durationMs: now - s.createdAt,
   })).sort((a, b) => a.startedAt - b.startedAt) });
 });
 
@@ -352,6 +364,42 @@ app.post("/api/admin/block", auth.requireAdmin, async (req, res) => {
 app.post("/api/admin/unblock", auth.requireAdmin, (req, res) => {
   try { auth.setBlocked((req.body || {}).email, false); res.json({ ok: true }); }
   catch (e) { res.status(400).json({ ok: false, error: String(e.message || e) }); }
+});
+
+// ban / unban by IP (kills any live boxes from that IP too)
+app.get("/api/admin/banned-ips", auth.requireAdmin, (_req, res) => res.json({ ok: true, ips: auth.listBannedIps() }));
+app.post("/api/admin/ban-ip", auth.requireAdmin, async (req, res) => {
+  try {
+    const ip = (req.body || {}).ip;
+    if (ip === req.ip) throw new Error("That's your own IP — you'd lock yourself out.");
+    auth.banIp(ip);
+    for (const s of [...sessions.values()]) if (s.ip === ip) await stopSession(s.id, "ip banned");
+    res.json({ ok: true });
+  } catch (e) { res.status(400).json({ ok: false, error: String(e.message || e) }); }
+});
+app.post("/api/admin/unban-ip", auth.requireAdmin, (req, res) => {
+  try { auth.unbanIp((req.body || {}).ip); res.json({ ok: true }); }
+  catch (e) { res.status(400).json({ ok: false, error: String(e.message || e) }); }
+});
+
+// export data as CSV (opens a download)
+function csv(rows, cols) {
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return [cols.join(","), ...rows.map(r => cols.map(c => esc(r[c])).join(","))].join("\n");
+}
+app.get("/api/admin/export/users.csv", auth.requireAdmin, (_req, res) => {
+  const rows = auth.listUsers().map(u => ({ ...u,
+    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : "",
+    lastLoginAt: u.lastLoginAt ? new Date(u.lastLoginAt).toISOString() : "" }));
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+  res.send(csv(rows, ["email", "plan", "blocked", "lastIp", "createdAt", "lastLoginAt", "loginCount"]));
+});
+app.get("/api/admin/export/activity.csv", auth.requireAdmin, (_req, res) => {
+  const rows = auth.getActivity(5000).map(e => ({ ...e, time: new Date(e.t).toISOString() }));
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=activity.csv");
+  res.send(csv(rows, ["time", "email", "type", "ip", "sid", "durMs", "reason"]));
 });
 
 app.get("/api/health", async (_req, res) => {
